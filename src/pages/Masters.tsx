@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Database, Users, Building, FolderKanban, Briefcase, Layers } from 'lucide-react';
+import { Plus, Database, Users, Building, FolderKanban, Briefcase, Layers, Clipboard} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { mockTasks } from '@/data/mockData';
 import { workerData } from 'worker_threads';
@@ -41,10 +41,10 @@ export function Masters() {
     },
     {
       title: 'Task Master',
-      description: 'Manage Task roles, access, and credentials',
-      icon: Users, // Assuming mockTasks has an icon for tasks
+      description: 'Manage task roles, access, and credentials',
+      icon: Clipboard,  
       route: '/masters/task',
-    },
+    }
   ];
 
   return (

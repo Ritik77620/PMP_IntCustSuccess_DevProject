@@ -6,6 +6,7 @@ import clientsRoutes from "./routes/Clinets.js";
 import usersRoutes from "./routes/users.js";
 import vendorsRoutes from "./routes/vendors.js";
 import timeEntriesRoutes from "./routes/timeEntries.js";
+import taskRoutes from "./routes/taskRoutes.js";
 import cors from 'cors';
 
 dotenv.config();
@@ -25,6 +26,7 @@ app.use("/api/clients", clientsRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/vendors", vendorsRoutes);
 app.use("/api/time-entries", timeEntriesRoutes);
+app.use("/api/tasks", taskRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

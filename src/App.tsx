@@ -19,7 +19,7 @@ import { ClientMaster } from "@/pages/masters/ClientMaster";
 import { VendorMaster } from "@/pages/masters/VendorMaster";
 import { MilestoneMaster } from "@/pages/masters/MilestoneMaster";
 import { UserMaster } from "@/pages/masters/UserMaster";
-
+import { TaskMaster } from "@/pages/masters/TaskMaster";  
 import { useThemeStore } from "@/store/themeStore";
 import { useEffect } from "react";
 
@@ -56,6 +56,7 @@ const App = () => {
               <Route path="masters/vendor" element={<VendorMaster />} />
               <Route path="masters/milestone" element={<MilestoneMaster />} />
               <Route path="masters/user" element={<UserMaster />} />
+              <Route path="/masters/task" element={<TaskMaster />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />

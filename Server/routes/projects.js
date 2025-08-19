@@ -45,5 +45,8 @@ router.delete("/:id", async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
-
+router.get('/', async (req, res) => {
+  const projects = await Project.find();
+  res.json(projects);
+});
 export default router;
