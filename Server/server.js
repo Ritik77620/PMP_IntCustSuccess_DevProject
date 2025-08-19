@@ -11,7 +11,11 @@ connectDB();
 
 app.use(cors());
 app.use(express.json());
-
+app.get(
+    '/', (req, res) => {
+        res.send('API is running...');
+    }  
+)
 app.use('/api/projects', projectRoutes); // ✅ correct path
 
 const PORT = process.env.PORT || 5000;
