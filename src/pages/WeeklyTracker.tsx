@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/ui/data-table';
@@ -29,18 +29,29 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { format } from 'date-fns';
 import { CalendarIcon, Plus, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { mockTimeEntries, mockProjects, mockTasks } from '@/data/mockData';
 
 interface TimeEntry {
-  id: string;
+  _id: string;
+  projectId: string;
   projectName: string;
-  taskName: string;
+  taskId?: string;
+  taskName?: string;
   date: string;
   hours: number;
-  notes: string;
+  notes?: string;
   dayType: string;
   rateType: string;
   approvalStatus: string;
+}
+
+interface Project {
+  id: string;
+  name: string;
+}
+
+interface Task {
+  id: string;
+  title: string;
 }
 
 const statusColors = {
@@ -49,78 +60,13 @@ const statusColors = {
   rejected: 'destructive',
 } as const;
 
-const columns: ColumnDef<TimeEntry>[] = [
-  {
-    accessorKey: 'date',
-    header: 'Date',
-    cell: ({ row }) => {
-      const date = new Date(row.getValue('date'));
-      return date.toLocaleDateString();
-    },
-  },
-  {
-    accessorKey: 'projectName',
-    header: 'Project',
-  },
-  {
-    accessorKey: 'taskName',
-    header: 'Task',
-    cell: ({ row }) => (
-      <div className="max-w-[200px] truncate">
-        {row.getValue('taskName') || 'General Work'}
-      </div>
-    ),
-  },
-  {
-    accessorKey: 'hours',
-    header: 'Hours',
-    cell: ({ row }) => (
-      <div className="flex items-center gap-1">
-        <Clock className="h-3 w-3" />
-        <span>{row.getValue('hours')}h</span>
-      </div>
-    ),
-  },
-  {
-    accessorKey: 'dayType',
-    header: 'Day Type',
-  },
-  {
-    accessorKey: 'rateType',
-    header: 'Rate Type',
-  },
-  {
-    accessorKey: 'approvalStatus',
-    header: 'Status',
-    cell: ({ row }) => {
-      const status = row.getValue('approvalStatus') as keyof typeof statusColors;
-      const Icon = status === 'approved' ? CheckCircle : status === 'rejected' ? XCircle : Clock;
-      return (
-        <div className="flex items-center gap-2">
-          <Icon className="h-4 w-4" />
-          <Badge variant={statusColors[status] || 'secondary'}>
-            {status}
-          </Badge>
-        </div>
-      );
-    },
-  },
-  {
-    accessorKey: 'notes',
-    header: 'Notes',
-    cell: ({ row }) => (
-      <div className="max-w-[200px] truncate">
-        {row.getValue('notes')}
-      </div>
-    ),
-  },
-];
-
 export function WeeklyTracker() {
-  const [timeEntries] = useState<TimeEntry[]>(mockTimeEntries);
+  const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-  
+
   const [newEntry, setNewEntry] = useState({
     projectId: '',
     taskId: '',
@@ -130,6 +76,25 @@ export function WeeklyTracker() {
     rateType: 'Standard',
   });
 
+  const fetchTimeEntries = async () => {
+    const res = await fetch('http://localhost:5000/api/time-entries');
+    const data = await res.json();
+    setTimeEntries(data);
+  };
+
+  // Mock Projects and Tasks (replace with backend API if available)
+  useEffect(() => {
+    setProjects([
+      { id: '1', name: 'Project A' },
+      { id: '2', name: 'Project B' },
+    ]);
+    setTasks([
+      { id: '1', title: 'Task 1' },
+      { id: '2', title: 'Task 2' },
+    ]);
+    fetchTimeEntries();
+  }, []);
+
   const totalHours = timeEntries.reduce((sum, entry) => sum + entry.hours, 0);
   const approvedHours = timeEntries
     .filter(entry => entry.approvalStatus === 'approved')
@@ -138,27 +103,74 @@ export function WeeklyTracker() {
     .filter(entry => entry.approvalStatus === 'pending')
     .reduce((sum, entry) => sum + entry.hours, 0);
 
-  const handleAddEntry = () => {
-    // Add time entry logic here
-    console.log('Adding time entry:', newEntry);
-    setIsAddDialogOpen(false);
-    setNewEntry({
-      projectId: '',
-      taskId: '',
-      hours: '',
-      notes: '',
-      dayType: 'Regular',
-      rateType: 'Standard',
+  const handleAddEntry = async () => {
+    if (!newEntry.projectId || !newEntry.hours || !selectedDate) return;
+
+    const project = projects.find(p => p.id === newEntry.projectId)?.name || '';
+    const task = tasks.find(t => t.id === newEntry.taskId)?.title || '';
+
+    const payload = {
+      ...newEntry,
+      date: selectedDate,
+      projectName: project,
+      taskName: task,
+      hours: parseFloat(newEntry.hours),
+    };
+
+    await fetch('http://localhost:5000/api/time-entries', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
     });
+
+    setIsAddDialogOpen(false);
+    setNewEntry({ projectId: '', taskId: '', hours: '', notes: '', dayType: 'Regular', rateType: 'Standard' });
+    fetchTimeEntries();
   };
+
+  const columns: ColumnDef<TimeEntry>[] = [
+    {
+      accessorKey: 'date',
+      header: 'Date',
+      cell: ({ row }) => new Date(row.getValue('date')).toLocaleDateString(),
+    },
+    { accessorKey: 'projectName', header: 'Project' },
+    { accessorKey: 'taskName', header: 'Task' },
+    {
+      accessorKey: 'hours',
+      header: 'Hours',
+      cell: ({ row }) => (
+        <div className="flex items-center gap-1">
+          <Clock className="h-3 w-3" />
+          <span>{row.getValue('hours')}h</span>
+        </div>
+      ),
+    },
+    { accessorKey: 'dayType', header: 'Day Type' },
+    { accessorKey: 'rateType', header: 'Rate Type' },
+    {
+      accessorKey: 'approvalStatus',
+      header: 'Status',
+      cell: ({ row }) => {
+        const status = row.getValue('approvalStatus') as keyof typeof statusColors;
+        const Icon = status === 'approved' ? CheckCircle : status === 'rejected' ? XCircle : Clock;
+        return (
+          <div className="flex items-center gap-2">
+            <Icon className="h-4 w-4" />
+            <Badge variant={statusColors[status] || 'secondary'}>{status}</Badge>
+          </div>
+        );
+      },
+    },
+    { accessorKey: 'notes', header: 'Notes' },
+  ];
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
+      {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
         className="flex items-center justify-between"
       >
         <div>
@@ -168,99 +180,63 @@ export function WeeklyTracker() {
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
             <Button className="gradient-primary shadow-glow">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Time Entry
+              <Plus className="mr-2 h-4 w-4" /> Add Time Entry
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle>Add Time Entry</DialogTitle>
-              <DialogDescription>
-                Record your work hours for a specific project and task.
-              </DialogDescription>
+              <DialogDescription>Record your work hours for a project/task.</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
+              {/* Date Picker */}
               <div className="grid gap-2">
-                <Label htmlFor="date">Date</Label>
+                <Label>Date</Label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "justify-start text-left font-normal",
-                        !selectedDate && "text-muted-foreground"
-                      )}
-                    >
+                    <Button variant="outline" className={cn(!selectedDate && 'text-muted-foreground')}>
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
+                      {selectedDate ? format(selectedDate, 'PPP') : 'Pick a date'}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={selectedDate}
-                      onSelect={setSelectedDate}
-                      className="p-3 pointer-events-auto"
-                    />
+                    <Calendar mode="single" selected={selectedDate} onSelect={setSelectedDate} className="p-3 pointer-events-auto" />
                   </PopoverContent>
                 </Popover>
               </div>
+              {/* Project */}
               <div className="grid gap-2">
-                <Label htmlFor="project">Project</Label>
+                <Label>Project</Label>
                 <Select value={newEntry.projectId} onValueChange={(value) => setNewEntry(prev => ({ ...prev, projectId: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select project" />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Select project" /></SelectTrigger>
                   <SelectContent>
-                    {mockProjects.map((project) => (
-                      <SelectItem key={project.id} value={project.id}>
-                        {project.name}
-                      </SelectItem>
-                    ))}
+                    {projects.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
+              {/* Task */}
               <div className="grid gap-2">
-                <Label htmlFor="task">Task (Optional)</Label>
+                <Label>Task (Optional)</Label>
                 <Select value={newEntry.taskId} onValueChange={(value) => setNewEntry(prev => ({ ...prev, taskId: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select task" />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Select task" /></SelectTrigger>
                   <SelectContent>
-                    {mockTasks.map((task) => (
-                      <SelectItem key={task.id} value={task.id}>
-                        {task.title}
-                      </SelectItem>
-                    ))}
+                    {tasks.map(t => <SelectItem key={t.id} value={t.id}>{t.title}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
+              {/* Hours */}
               <div className="grid gap-2">
-                <Label htmlFor="hours">Hours</Label>
-                <Input
-                  id="hours"
-                  type="number"
-                  step="0.5"
-                  min="0"
-                  max="24"
-                  value={newEntry.hours}
-                  onChange={(e) => setNewEntry(prev => ({ ...prev, hours: e.target.value }))}
-                  placeholder="Enter hours worked"
-                />
+                <Label>Hours</Label>
+                <Input type="number" step="0.5" min="0" max="24" value={newEntry.hours} onChange={(e) => setNewEntry(prev => ({ ...prev, hours: e.target.value }))} placeholder="Enter hours worked" />
               </div>
+              {/* Notes */}
               <div className="grid gap-2">
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea
-                  id="notes"
-                  value={newEntry.notes}
-                  onChange={(e) => setNewEntry(prev => ({ ...prev, notes: e.target.value }))}
-                  placeholder="Describe the work done..."
-                  rows={3}
-                />
+                <Label>Notes</Label>
+                <Textarea rows={3} value={newEntry.notes} onChange={(e) => setNewEntry(prev => ({ ...prev, notes: e.target.value }))} placeholder="Describe the work done..." />
               </div>
             </div>
             <DialogFooter>
-              <Button type="submit" onClick={handleAddEntry}>Add Entry</Button>
+              <Button onClick={handleAddEntry}>Add Entry</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -268,68 +244,19 @@ export function WeeklyTracker() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="transition-smooth hover:shadow-glow">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Hours</p>
-                <p className="text-2xl font-bold">{totalHours}h</p>
-              </div>
-              <Clock className="h-8 w-8 text-primary" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="transition-smooth hover:shadow-glow">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Approved Hours</p>
-                <p className="text-2xl font-bold text-accent">{approvedHours}h</p>
-              </div>
-              <CheckCircle className="h-8 w-8 text-accent" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="transition-smooth hover:shadow-glow">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Pending Hours</p>
-                <p className="text-2xl font-bold text-warning">{pendingHours}h</p>
-              </div>
-              <Clock className="h-8 w-8 text-warning" />
-            </div>
-          </CardContent>
-        </Card>
+        <Card><CardContent className="p-4"><p>Total Hours</p><p>{totalHours}h</p></CardContent></Card>
+        <Card><CardContent className="p-4"><p>Approved Hours</p><p>{approvedHours}h</p></CardContent></Card>
+        <Card><CardContent className="p-4"><p>Pending Hours</p><p>{pendingHours}h</p></CardContent></Card>
       </div>
 
-      {/* Time Entries Table */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: 0.1 }}
-      >
+      {/* Data Table */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="flex justify-between">
             <CardTitle>Time Entries</CardTitle>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm">
-                Submit Week
-              </Button>
-              <Button variant="outline" size="sm">
-                Export
-              </Button>
-            </div>
           </CardHeader>
           <CardContent>
-            <DataTable
-              columns={columns}
-              data={timeEntries}
-              searchKey="projectName"
-              searchPlaceholder="Search time entries..."
-            />
+            <DataTable columns={columns} data={timeEntries} searchKey="projectName" searchPlaceholder="Search time entries..." />
           </CardContent>
         </Card>
       </motion.div>
