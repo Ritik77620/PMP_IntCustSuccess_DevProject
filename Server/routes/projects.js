@@ -1,27 +1,31 @@
-const express = require('express');
-const router = express.Router();
-const Project = require('../models/Project');
+// routes/projects.js
+import express from 'express';
+import Project from '../models/Project.js'; // adjust if using named/default export
 
-// GET all projects
-router.get('/', async (req, res) => {
+const router = express.Router(); // ✅ Initialize router first
+
+// Controller functions
+export const createProject = async (req, res) => {
   try {
-    const projects = await Project.find().sort({ createdAt: -1 });
-    res.json(projects);
+    const project = new Project(req.body);
+    await project.save();
+    res.status(201).json(project);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
-});
+};
 
-// POST new project
-router.post('/', async (req, res) => {
-  const { name, client, siteName, projectManager, status, progress, endDate } = req.body;
+export const getProjects = async (req, res) => {
   try {
-    const project = new Project({ name, client, siteName, projectManager, status, progress, endDate });
-    const savedProject = await project.save();
-    res.status(201).json(savedProject);
+    const projects = await Project.find();
+    res.status(200).json(projects);
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    res.status(500).json({ message: err.message });
   }
-});
+};
 
-module.exports = router;
+// Routes
+router.post('/', createProject);
+router.get('/', getProjects);
+
+export default router; // ✅ default export
