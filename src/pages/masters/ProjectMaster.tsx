@@ -6,7 +6,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 interface Project {
   id: string;
-  projectId: string;
   projectName: string;
   projectCode: string;
   projectDescription: string;
@@ -16,7 +15,6 @@ export function ProjectMaster() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [form, setForm] = useState<Project>({
     id: '',
-    projectId: '',
     projectName: '',
     projectCode: '',
     projectDescription: '',
@@ -40,7 +38,7 @@ export function ProjectMaster() {
   };
 
   const handleSave = () => {
-    if (!form.projectId || !form.projectName) return;
+    if (!form.projectName) return;
 
     if (form.id) {
       setProjects(projects.map(p => (p.id === form.id ? form : p)));
@@ -48,7 +46,7 @@ export function ProjectMaster() {
       setProjects([...projects, { ...form, id: Date.now().toString() }]);
     }
 
-    setForm({ id: '', projectId: '', projectName: '', projectCode: '', projectDescription: '' });
+    setForm({ id: '', projectName: '', projectCode: '', projectDescription: '' });
     setShowForm(false); // Hide form after saving
   };
 
@@ -78,7 +76,6 @@ export function ProjectMaster() {
             <CardTitle>{form.id ? 'Edit Project' : 'Add New Project'}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Input name="projectId" placeholder="Project ID" value={form.projectId} onChange={handleChange} />
             <Input name="projectName" placeholder="Project Name" value={form.projectName} onChange={handleChange} />
             <Input name="projectCode" placeholder="Project Code" value={form.projectCode} onChange={handleChange} />
             <Input name="projectDescription" placeholder="Project Description" value={form.projectDescription} onChange={handleChange} />
@@ -99,7 +96,6 @@ export function ProjectMaster() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Project ID</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Code</TableHead>
                 <TableHead>Description</TableHead>
@@ -109,7 +105,6 @@ export function ProjectMaster() {
             <TableBody>
               {projects.map((p) => (
                 <TableRow key={p.id}>
-                  <TableCell>{p.projectId}</TableCell>
                   <TableCell>{p.projectName}</TableCell>
                   <TableCell>{p.projectCode}</TableCell>
                   <TableCell>{p.projectDescription}</TableCell>

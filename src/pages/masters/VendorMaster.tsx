@@ -6,7 +6,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 interface Vendor {
   id: string;
-  vendorId: string;
   vendorName: string;
   vendorLocation: string;
   vendorGst: string;
@@ -18,7 +17,6 @@ export function VendorMaster() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [form, setForm] = useState<Vendor>({
     id: '',
-    vendorId: '',
     vendorName: '',
     vendorLocation: '',
     vendorGst: '',
@@ -44,7 +42,7 @@ export function VendorMaster() {
   };
 
   const handleSave = () => {
-    if (!form.vendorId || !form.vendorName) return;
+    if (!form.vendorName) return;
 
     if (form.id) {
       setVendors(vendors.map(v => (v.id === form.id ? form : v)));
@@ -52,7 +50,7 @@ export function VendorMaster() {
       setVendors([...vendors, { ...form, id: Date.now().toString() }]);
     }
 
-    setForm({ id: '', vendorId: '', vendorName: '', vendorLocation: '', vendorGst: '', email: '', spoc: '' });
+    setForm({ id: '', vendorName: '', vendorLocation: '', vendorGst: '', email: '', spoc: '' });
     setShowForm(false); // Hide form after saving
   };
 
@@ -82,7 +80,6 @@ export function VendorMaster() {
             <CardTitle>{form.id ? 'Edit Vendor' : 'Add New Vendor'}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Input name="vendorId" placeholder="Vendor ID" value={form.vendorId} onChange={handleChange} />
             <Input name="vendorName" placeholder="Vendor Name" value={form.vendorName} onChange={handleChange} />
             <Input name="vendorLocation" placeholder="Vendor Location" value={form.vendorLocation} onChange={handleChange} />
             <Input name="vendorGst" placeholder="Vendor GST" value={form.vendorGst} onChange={handleChange} />
@@ -105,7 +102,6 @@ export function VendorMaster() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Vendor ID</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Location</TableHead>
                 <TableHead>GST</TableHead>
@@ -117,7 +113,6 @@ export function VendorMaster() {
             <TableBody>
               {vendors.map((v) => (
                 <TableRow key={v.id}>
-                  <TableCell>{v.vendorId}</TableCell>
                   <TableCell>{v.vendorName}</TableCell>
                   <TableCell>{v.vendorLocation}</TableCell>
                   <TableCell>{v.vendorGst}</TableCell>

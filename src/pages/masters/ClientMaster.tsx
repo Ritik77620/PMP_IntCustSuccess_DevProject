@@ -6,7 +6,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 interface Client {
   id: string;
-  clientId: string;
   clientName: string;
   clientLocation: string;
   gst: string;
@@ -18,7 +17,6 @@ export function ClientMaster() {
   const [clients, setClients] = useState<Client[]>([]);
   const [form, setForm] = useState<Client>({
     id: '',
-    clientId: '',
     clientName: '',
     clientLocation: '',
     gst: '',
@@ -44,7 +42,7 @@ export function ClientMaster() {
   };
 
   const handleSave = () => {
-    if (!form.clientId || !form.clientName) return;
+    if (!form.clientName) return; // ✅ Removed clientId validation
 
     if (form.id) {
       setClients(clients.map(c => (c.id === form.id ? form : c)));
@@ -52,7 +50,7 @@ export function ClientMaster() {
       setClients([...clients, { ...form, id: Date.now().toString() }]);
     }
 
-    setForm({ id: '', clientId: '', clientName: '', clientLocation: '', gst: '', email: '', spoc: '' });
+    setForm({ id: '', clientName: '', clientLocation: '', gst: '', email: '', spoc: '' });
     setShowForm(false); // Hide form after saving
   };
 
@@ -82,7 +80,6 @@ export function ClientMaster() {
             <CardTitle>{form.id ? 'Edit Client' : 'Add New Client'}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Input name="clientId" placeholder="Client ID" value={form.clientId} onChange={handleChange} />
             <Input name="clientName" placeholder="Client Name" value={form.clientName} onChange={handleChange} />
             <Input name="clientLocation" placeholder="Client Location" value={form.clientLocation} onChange={handleChange} />
             <Input name="gst" placeholder="GST" value={form.gst} onChange={handleChange} />
@@ -105,7 +102,6 @@ export function ClientMaster() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Client ID</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Location</TableHead>
                 <TableHead>GST</TableHead>
@@ -117,7 +113,6 @@ export function ClientMaster() {
             <TableBody>
               {clients.map((c) => (
                 <TableRow key={c.id}>
-                  <TableCell>{c.clientId}</TableCell>
                   <TableCell>{c.clientName}</TableCell>
                   <TableCell>{c.clientLocation}</TableCell>
                   <TableCell>{c.gst}</TableCell>
