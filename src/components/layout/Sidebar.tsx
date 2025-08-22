@@ -28,13 +28,13 @@ const navigationItems = [
     title: 'Projects',
     href: '/projects',
     icon: FolderKanban,
-    badge: '12',
+    badge: '',
   },
   {
     title: 'Weekly Tracker',
     href: '/timesheet',
     icon: Clock,
-    badge: '3',
+    badge: '',
   },
   {
     title: 'Ticket Tracker',
