@@ -1,11 +1,20 @@
-import { motion } from 'framer-motion';
-import { StatsCard } from '@/components/dashboard/StatsCard';
-import { ProjectChart } from '@/components/dashboard/ProjectChart';
-import { RecentActivity } from '@/components/dashboard/RecentActivity';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Button } from '@/components/ui/button';
+"use client";
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  Legend,
+} from "recharts";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatsCard } from "@/components/dashboard/StatsCard";
+import { RecentActivity } from "@/components/dashboard/RecentActivity";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import {
   FolderKanban,
   Clock,
@@ -14,59 +23,123 @@ import {
   Calendar,
   Users,
   ArrowRight,
-} from 'lucide-react';
-import { mockProjects, mockTasks, mockTimeEntries } from '@/data/mockData';
+} from "lucide-react";
+import api from "@/lib/api";
 
 export function Dashboard() {
-  const totalProjects = mockProjects.length;
-  const activeProjects = mockProjects.filter(p => p.status === 'active').length;
-  const overdueProjects = mockProjects.filter(p => new Date(p.endDate) < new Date()).length;
-  const myTasks = mockTasks.filter(t => t.assigneeId === '2'); // Current user's tasks
-  const pendingTimesheets = mockTimeEntries.filter(t => t.approvalStatus === 'pending').length;
+  const [projects, setProjects] = useState<any[]>([]);
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [timeEntries, setTimeEntries] = useState<any[]>([]);
+  const [loadingProjects, setLoadingProjects] = useState(true);
+  const [loadingTasks, setLoadingTasks] = useState(true);
+  const [loadingTimeEntries, setLoadingTimeEntries] = useState(true);
 
+  const fetchProjects = async () => {
+    setLoadingProjects(true);
+    try {
+      const res = await api.get("/api/projects");
+      setProjects(res.data);
+    } catch (e) {
+      console.error("Failed to fetch projects", e);
+    } finally {
+      setLoadingProjects(false);
+    }
+  };
+
+  const fetchTasks = async () => {
+    setLoadingTasks(true);
+    try {
+      const res = await api.get("/api/tasks");
+      setTasks(res.data);
+    } catch (e) {
+      console.error("Failed to fetch tasks", e);
+    } finally {
+      setLoadingTasks(false);
+    }
+  };
+
+  const fetchTimeEntries = async () => {
+    setLoadingTimeEntries(true);
+    try {
+      const res = await api.get("/api/timeentries");
+      setTimeEntries(res.data);
+    } catch (e) {
+      console.error("Failed to fetch time entries", e);
+    } finally {
+      setLoadingTimeEntries(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProjects();
+    fetchTasks();
+    fetchTimeEntries();
+  }, []);
+
+  // Compute project stats
+  const totalProjects = projects.length;
+  const activeProjects = projects.filter((p) => p.status === "active").length;
+  const completedProjects = projects.filter((p) => p.status === "completed").length;
+  const planningProjects = projects.filter((p) => p.status === "planning").length;
+  const onHoldProjects = projects.filter((p) => p.status === "on_hold").length;
+  const overdueProjects = projects.filter(
+    (p) => p.planClose && new Date(p.planClose) < new Date()
+  ).length;
+
+  // Filter tasks assigned to current user id '2' (example)
+  const myTasks = tasks.filter((t) => t.assigneeId === "2");
+  const pendingTimesheets = timeEntries.filter((t) => t.approvalStatus === "pending").length;
+
+  // Mock or fetched upcoming milestones: ideally should come from API
   const upcomingMilestones = [
-    { name: 'API Testing Phase', project: 'Arlyn', dueDate: '2025-08-20', status: 'in_progress' },
-    { name: 'UI Implementation', project: 'TechFlow Solutions', dueDate: '2025-08-25', status: 'pending' },
-    { name: 'Database Migration', project: 'DataViz Dashboard', dueDate: '2025-09-01', status: 'planning' },
+    { name: "API Testing Phase", project: "Arlyn", dueDate: "2025-08-20", status: "in_progress" },
+    { name: "UI Implementation", project: "TechFlow Solutions", dueDate: "2025-08-25", status: "pending" },
+    { name: "Database Migration", project: "DataViz Dashboard", dueDate: "2025-09-01", status: "planning" },
+  ];
+
+  // Prepare pie chart data dynamically
+  const pieData = [
+    { name: "Completed", value: completedProjects, color: "hsl(var(--accent))" },
+    { name: "In Progress", value: activeProjects, color: "hsl(var(--primary))" },
+    { name: "Planning", value: planningProjects, color: "hsl(var(--warning))" },
+    { name: "On Hold", value: onHoldProjects, color: "hsl(var(--muted))" },
   ];
 
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-      >
+      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
         <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">Welcome back! Here's what's happening today.</p>
+        <p className="text-muted-foreground">
+          Welcome back! Here's what's happening today.
+        </p>
       </motion.div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard
           title="Total Projects"
-          value={totalProjects}
-          change={{ value: '+2 this month', type: 'increase' }}
+          value={loadingProjects ? "..." : totalProjects}
+          change={{ value: "+2 this month", type: "increase" }}
           icon={FolderKanban}
           gradient
         />
         <StatsCard
           title="Active Projects"
-          value={activeProjects}
-          change={{ value: '+1 this week', type: 'increase' }}
+          value={loadingProjects ? "..." : activeProjects}
+          change={{ value: "+1 this week", type: "increase" }}
           icon={TrendingUp}
         />
         <StatsCard
           title="Pending Timesheets"
-          value={pendingTimesheets}
-          change={{ value: 'Need review', type: 'neutral' }}
+          value={loadingTimeEntries ? "..." : pendingTimesheets}
+          change={{ value: "Need review", type: "neutral" }}
           icon={Clock}
         />
         <StatsCard
           title="Overdue Projects"
-          value={overdueProjects}
-          change={{ value: 'Action required', type: 'decrease' }}
+          value={loadingProjects ? "..." : overdueProjects}
+          change={{ value: "Action required", type: "decrease" }}
           icon={AlertTriangle}
         />
       </div>
@@ -75,7 +148,39 @@ export function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Project Chart */}
         <div className="lg:col-span-1">
-          <ProjectChart />
+          <Card className="transition-smooth hover:shadow-glow">
+            <CardHeader>
+              <CardTitle>Project Status Distribution</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "hsl(var(--card))",
+                      border: "1px solid hsl(var(--border))",
+                      borderRadius: "var(--radius)",
+                    }}
+                  />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Recent Activity */}
@@ -100,40 +205,41 @@ export function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {myTasks.slice(0, 4).map((task) => (
-                <motion.div
-                  key={task.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="flex items-center justify-between p-3 rounded-lg border bg-card/50 hover:bg-muted/50 transition-smooth"
-                >
-                  <div className="space-y-1">
-                    <p className="font-medium text-sm">{task.title}</p>
-                    <p className="text-xs text-muted-foreground">{task.description}</p>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-xs">
-                        {task.priority}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        {task.loggedHours}h / {task.estimatedHours}h
-                      </span>
+              {loadingTasks ? (
+                <p>Loading tasks...</p>
+              ) : (
+                myTasks.slice(0, 4).map((task) => (
+                  <motion.div
+                    key={task.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="flex items-center justify-between p-3 rounded-lg border bg-card/50 hover:bg-muted/50 transition-smooth"
+                  >
+                    <div className="space-y-1">
+                      <p className="font-medium text-sm">{task.title}</p>
+                      <p className="text-xs text-muted-foreground">{task.description}</p>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs">
+                          {task.priority}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {task.loggedHours}h / {task.estimatedHours}h
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-right space-y-1">
-                    <Badge 
-                      variant={task.status === 'completed' ? 'default' : 'secondary'}
-                      className="text-xs"
-                    >
-                      {task.status.replace('_', ' ')}
-                    </Badge>
-                    <Progress 
-                      value={(task.loggedHours / task.estimatedHours) * 100} 
-                      className="w-16 h-2"
-                    />
-                  </div>
-                </motion.div>
-              ))}
+                    <div className="text-right space-y-1">
+                      <Badge
+                        variant={task.status === "completed" ? "default" : "secondary"}
+                        className="text-xs"
+                      >
+                        {task.status.replace("_", " ")}
+                      </Badge>
+                      <Progress value={(task.loggedHours / task.estimatedHours) * 100} className="w-16 h-2" />
+                    </div>
+                  </motion.div>
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
@@ -152,7 +258,11 @@ export function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {upcomingMilestones.map((milestone, index) => (
+              {[
+                { name: "API Testing Phase", project: "Arlyn", dueDate: "2025-08-20", status: "in_progress" },
+                { name: "UI Implementation", project: "TechFlow Solutions", dueDate: "2025-08-25", status: "pending" },
+                { name: "Database Migration", project: "DataViz Dashboard", dueDate: "2025-09-01", status: "planning" },
+              ].map((milestone, index) => (
                 <motion.div
                   key={index}
                   initial={{ opacity: 0, x: -20 }}
@@ -166,17 +276,17 @@ export function Dashboard() {
                   </div>
                   <div className="text-right space-y-1">
                     <p className="text-xs font-medium">{milestone.dueDate}</p>
-                    <Badge 
+                    <Badge
                       variant={
-                        milestone.status === 'completed' 
-                          ? 'default' 
-                          : milestone.status === 'in_progress'
-                            ? 'secondary'
-                            : 'outline'
+                        milestone.status === "completed"
+                          ? "default"
+                          : milestone.status === "in_progress"
+                          ? "secondary"
+                          : "outline"
                       }
                       className="text-xs"
                     >
-                      {milestone.status.replace('_', ' ')}
+                      {milestone.status.replace("_", " ")}
                     </Badge>
                   </div>
                 </motion.div>

@@ -1,14 +1,60 @@
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState, useEffect } from "react";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import api from "@/lib/api"; // your axios or fetch wrapper
 
-const data = [
-  { name: 'Completed', value: 45, color: 'hsl(var(--accent))' },
-  { name: 'In Progress', value: 35, color: 'hsl(var(--primary))' },
-  { name: 'Planning', value: 15, color: 'hsl(var(--warning))' },
-  { name: 'On Hold', value: 5, color: 'hsl(var(--muted))' },
-];
+type Status = "active" | "planning" | "completed" | "on_hold";
+
+interface Project {
+  status: Status;
+  // other fields...
+}
 
 export function ProjectChart() {
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const res = await api.get("/api/projects");
+        setProjects(res.data);
+      } catch (err) {
+        console.error("Failed to fetch projects", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProjects();
+  }, []);
+
+  if (loading) {
+    return <p>Loading chart...</p>;
+  }
+
+  // Compute counts per status
+  const counts = {
+    completed: 0,
+    active: 0,
+    planning: 0,
+    on_hold: 0,
+  };
+
+  projects.forEach((p) => {
+    if (p.status === "completed") counts.completed++;
+    else if (p.status === "active") counts.active++;
+    else if (p.status === "planning") counts.planning++;
+    else if (p.status === "on_hold") counts.on_hold++;
+  });
+
+  // Build pie chart data
+  const data = [
+    { name: "Completed", value: counts.completed, color: "hsl(var(--accent))" },
+    { name: "In Progress", value: counts.active, color: "hsl(var(--primary))" },
+    { name: "Planning", value: counts.planning, color: "hsl(var(--warning))" },
+    { name: "On Hold", value: counts.on_hold, color: "hsl(var(--muted))" },
+  ];
+
   return (
     <Card className="transition-smooth hover:shadow-glow">
       <CardHeader>
@@ -31,11 +77,11 @@ export function ProjectChart() {
                 <Cell key={`cell-${index}`} fill={entry.color} />
               ))}
             </Pie>
-            <Tooltip 
+            <Tooltip
               contentStyle={{
-                backgroundColor: 'hsl(var(--card))',
-                border: '1px solid hsl(var(--border))',
-                borderRadius: 'var(--radius)',
+                backgroundColor: "hsl(var(--card))",
+                border: "1px solid hsl(var(--border))",
+                borderRadius: "var(--radius)",
               }}
             />
             <Legend />

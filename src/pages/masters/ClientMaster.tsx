@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import api from "@/lib/api"; // Your Axios or fetch wrapper configured to baseURL
 
 interface Client {
   id: string;
@@ -16,74 +17,94 @@ interface Client {
 export function ClientMaster() {
   const [clients, setClients] = useState<Client[]>([]);
   const [form, setForm] = useState<Client>({
-    id: '',
-    clientName: '',
-    clientLocation: '',
-    gst: '',
-    email: '',
-    spoc: '',
+    id: "",
+    clientName: "",
+    clientLocation: "",
+    gst: "",
+    email: "",
+    spoc: "",
   });
+  const [showForm, setShowForm] = useState(false);
 
-  const [showForm, setShowForm] = useState(false); // Control form visibility
-
-  // Load data from localStorage
   useEffect(() => {
-    const stored = localStorage.getItem('clients');
-    if (stored) setClients(JSON.parse(stored));
+    fetchClients();
   }, []);
 
-  // Save data to localStorage
-  useEffect(() => {
-    localStorage.setItem('clients', JSON.stringify(clients));
-  }, [clients]);
+  const fetchClients = async () => {
+    try {
+      const res = await api.get("/api/clients");
+      setClients(res.data);
+    } catch (err) {
+      console.error("Failed to fetch clients", err);
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSave = () => {
-    if (!form.clientName) return;
-
-    if (form.id) {
-      setClients(clients.map(c => (c.id === form.id ? form : c)));
-    } else {
-      setClients([...clients, { ...form, id: Date.now().toString() }]);
+  const handleSave = async () => {
+    if (!form.clientName.trim()) {
+      alert("Client Name is required");
+      return;
     }
-
-    setForm({ id: '', clientName: '', clientLocation: '', gst: '', email: '', spoc: '' });
-    setShowForm(false); // Hide form after saving
+    try {
+      if (form.id) {
+        await api.put(`/api/clients/${form.id}`, form);
+      } else {
+        await api.post("/api/clients", form);
+      }
+      fetchClients();
+      setForm({
+        id: "",
+        clientName: "",
+        clientLocation: "",
+        gst: "",
+        email: "",
+        spoc: "",
+      });
+      setShowForm(false);
+    } catch (err) {
+      console.error("Failed to save client", err);
+      alert("Failed to save client");
+    }
   };
 
   const handleEdit = (id: string) => {
-    const client = clients.find(c => c.id === id);
+    const client = clients.find((c) => c.id === id);
     if (client) {
       setForm(client);
-      setShowForm(true); // Show form when editing
+      setShowForm(true);
     }
   };
 
-  const handleDelete = (id: string) => {
-    setClients(clients.filter(c => c.id !== id));
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this client?")) return;
+    try {
+      await api.delete(`/api/clients/${id}`);
+      fetchClients();
+    } catch (err) {
+      console.error("Failed to delete client", err);
+      alert("Failed to delete client");
+    }
   };
 
   return (
     <div className="space-y-6 p-4">
       <h1 className="text-2xl font-bold">Client Master</h1>
 
-      {/* Button to open the Add New Client form */}
       <Button onClick={() => setShowForm(true)}>+ Add New Client</Button>
 
-      {/* Form */}
       {showForm && (
         <Card>
           <CardHeader>
-            <CardTitle>{form.id ? 'Edit Client' : 'Add New Client'}</CardTitle>
+            <CardTitle>{form.id ? "Edit Client" : "Add New Client"}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Input name="clientName" placeholder="Client Name" value={form.clientName} onChange={handleChange} />
+            <Input name="clientName" placeholder="Client Name" value={form.clientName} onChange={handleChange} required />
             <Input name="clientLocation" placeholder="Client Location" value={form.clientLocation} onChange={handleChange} />
             <Input name="gst" placeholder="GST" value={form.gst} onChange={handleChange} />
-            <Input name="email" placeholder="Email" value={form.email} onChange={handleChange} />
+            <Input name="email" placeholder="Email" type="email" value={form.email} onChange={handleChange} />
             <Input name="spoc" placeholder="SPOC" value={form.spoc} onChange={handleChange} />
             <div className="flex space-x-2">
               <Button onClick={handleSave}>Save</Button>
@@ -93,7 +114,6 @@ export function ClientMaster() {
         </Card>
       )}
 
-      {/* Clients Table */}
       <Card>
         <CardHeader>
           <CardTitle>Clients List</CardTitle>

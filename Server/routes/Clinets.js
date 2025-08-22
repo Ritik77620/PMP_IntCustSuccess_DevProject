@@ -1,48 +1,65 @@
-import express from "express";
-import Client from "../models/Client.js";
+import express from 'express';
+import Client from '../models/Client.js';
 
 const router = express.Router();
 
-// GET all clients
-router.get("/", async (req, res) => {
+// Get all clients
+router.get('/', async (req, res) => {
   try {
-    const clients = await Client.find().sort({ createdAt: -1 });
+    const clients = await Client.find();
     res.json(clients);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server Error' });
   }
 });
 
-// POST create a client
-router.post("/", async (req, res) => {
-  const client = new Client(req.body);
+// Create a new client
+router.post('/', async (req, res) => {
   try {
-    const savedClient = await client.save();
-    res.status(201).json(savedClient);
-  } catch (err) {
-    res.status(400).json({ message: err.message });
+    const { clientName, clientLocation, gst, email, spoc } = req.body;
+    if (!clientName) {
+      return res.status(400).json({ message: 'Client Name is required' });
+    }
+    const client = new Client({ clientName, clientLocation, gst, email, spoc });
+    await client.save();
+    res.status(201).json(client);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server Error' });
   }
 });
 
-// PUT update a client
-router.put("/:id", async (req, res) => {
+// Update client by ID
+router.put('/:id', async (req, res) => {
   try {
-    const updatedClient = await Client.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    if (!updatedClient) return res.status(404).json({ message: "Client not found" });
-    res.json(updatedClient);
-  } catch (err) {
-    res.status(400).json({ message: err.message });
+    const { clientName, clientLocation, gst, email, spoc } = req.body;
+    if (!clientName) {
+      return res.status(400).json({ message: 'Client Name is required' });
+    }
+    const client = await Client.findByIdAndUpdate(
+      req.params.id,
+      { clientName, clientLocation, gst, email, spoc },
+      { new: true }
+    );
+    if (!client) {
+      return res.status(404).json({ message: 'Client not found' });
+    }
+    res.json(client);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server Error' });
   }
 });
 
-// DELETE a client
-router.delete("/:id", async (req, res) => {
+// Delete client by ID
+router.delete('/:id', async (req, res) => {
   try {
-    const deletedClient = await Client.findByIdAndDelete(req.params.id);
-    if (!deletedClient) return res.status(404).json({ message: "Client not found" });
-    res.json({ message: "Client deleted successfully" });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+    await Client.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Client deleted' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server Error' });
   }
 });
 
