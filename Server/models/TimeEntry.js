@@ -1,7 +1,6 @@
 import mongoose from "mongoose";
 
 const timeEntrySchema = new mongoose.Schema({
-  projectId: { type: String, required: true },
   taskId: { type: String },
   date: { type: Date, required: true },
   hours: { type: Number, required: true },

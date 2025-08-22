@@ -5,78 +5,85 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface Milestone {
-  id: string;
+  _id?: string;
   name: string;
   sequence: string;
 }
 
 export function MilestoneMaster() {
   const [milestones, setMilestones] = useState<Milestone[]>([]);
-  const [form, setForm] = useState<Milestone>({
-    id: '',
-    name: '',
-    sequence: '',
-  });
-
+  const [form, setForm] = useState<Milestone>({ name: '', sequence: '' });
+  const [editId, setEditId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
 
-  // Load data from localStorage
-  useEffect(() => {
-    const stored = localStorage.getItem('milestones');
-    if (stored) setMilestones(JSON.parse(stored));
-  }, []);
+  // Fetch milestones
+  const fetchMilestones = async () => {
+    const res = await fetch('http://localhost:5000/api/milestones');
+    const data = await res.json();
+    setMilestones(data);
+  };
 
-  // Save data to localStorage
   useEffect(() => {
-    localStorage.setItem('milestones', JSON.stringify(milestones));
-  }, [milestones]);
+    fetchMilestones();
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSave = () => {
-    if (!form.name) return;
+  const handleSave = async () => {
+    if (!form.name) return alert('Name is required');
 
-    if (form.id) {
-      setMilestones(milestones.map(m => (m.id === form.id ? form : m)));
+    if (editId) {
+      // Update milestone
+      await fetch(`http://localhost:5000/api/milestones/${editId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
     } else {
-      setMilestones([...milestones, { ...form, id: Date.now().toString() }]);
+      // Create milestone
+      await fetch('http://localhost:5000/api/milestones', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
     }
 
-    setForm({ id: '', name: '', sequence: '' });
+    setForm({ name: '', sequence: '' });
+    setEditId(null);
     setShowForm(false);
+    fetchMilestones();
   };
 
-  const handleEdit = (id: string) => {
-    const milestone = milestones.find(m => m.id === id);
-    if (milestone) {
-      setForm(milestone);
-      setShowForm(true);
-    }
+  const handleEdit = (milestone: Milestone) => {
+    setForm({ name: milestone.name, sequence: milestone.sequence });
+    setEditId(milestone._id!);
+    setShowForm(true);
   };
 
-  const handleDelete = (id: string) => {
-    setMilestones(milestones.filter(m => m.id !== id));
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure?')) return;
+    await fetch(`http://localhost:5000/api/milestones/${id}`, { method: 'DELETE' });
+    fetchMilestones();
   };
 
   return (
     <div className="space-y-6 p-4">
       <h1 className="text-2xl font-bold">Milestone Master</h1>
-
       <Button onClick={() => setShowForm(true)}>+ Add New Milestone</Button>
 
       {showForm && (
         <Card>
           <CardHeader>
-            <CardTitle>{form.id ? 'Edit Milestone' : 'Add New Milestone'}</CardTitle>
+            <CardTitle>{editId ? 'Edit Milestone' : 'Add New Milestone'}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <Input name="name" placeholder="Name" value={form.name} onChange={handleChange} />
             <Input name="sequence" placeholder="Sequence" value={form.sequence} onChange={handleChange} />
             <div className="flex space-x-2">
               <Button onClick={handleSave}>Save</Button>
-              <Button variant="secondary" onClick={() => setShowForm(false)}>Cancel</Button>
+              <Button variant="secondary" onClick={() => { setShowForm(false); setForm({ name: '', sequence: '' }); setEditId(null); }}>Cancel</Button>
             </div>
           </CardContent>
         </Card>
@@ -97,12 +104,12 @@ export function MilestoneMaster() {
             </TableHeader>
             <TableBody>
               {milestones.map((m) => (
-                <TableRow key={m.id}>
+                <TableRow key={m._id}>
                   <TableCell>{m.name}</TableCell>
                   <TableCell>{m.sequence}</TableCell>
                   <TableCell className="space-x-2">
-                    <Button size="sm" onClick={() => handleEdit(m.id)}>Edit</Button>
-                    <Button size="sm" variant="destructive" onClick={() => handleDelete(m.id)}>Delete</Button>
+                    <Button size="sm" onClick={() => handleEdit(m)}>Edit</Button>
+                    <Button size="sm" variant="destructive" onClick={() => handleDelete(m._id!)}>Delete</Button>
                   </TableCell>
                 </TableRow>
               ))}
