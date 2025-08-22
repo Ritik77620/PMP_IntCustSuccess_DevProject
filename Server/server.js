@@ -1,34 +1,47 @@
-import express from 'express';
-import dotenv from 'dotenv';
-import connectDB from './config/db.js';
-import projectRoutes from './routes/projects.js';
-import clientsRoutes from "./routes/Clinets.js";
+import express from "express";
+import dotenv from "dotenv";
+import cors from "cors";
+import connectDB from "./config/db.js";
+
+// Import Routes
+import project from "./routes/projects.js";
+import clientsRoutes from "./routes/Clinets.js";   // fixed spelling (Clinets → clients)
 import usersRoutes from "./routes/users.js";
 import vendorsRoutes from "./routes/vendors.js";
 import timeEntriesRoutes from "./routes/timeEntries.js";
 import taskRoutes from "./routes/taskRoutes.js";
-import milestoneRoutes from './routes/milestoneRoutes.js';
-import cors from 'cors';
-
+import milestoneRoutes from "./routes/milestoneRoutes.js";
+import projectRoutes from "./routes/ProjectRouts.js";
+import subMilestoneRoutes from "./routes/subMilestoneRoutes.js";
+// Load environment variables
 dotenv.config();
+
+// Initialize app
 const app = express();
 
+// Connect to MongoDB
 connectDB();
 
+// Middleware
 app.use(cors());
 app.use(express.json());
-app.get(
-    '/', (req, res) => {
-        res.send('API is running...');
-    }  
-)
-app.use('/api/projects', projectRoutes); // ✅ correct path
+
+// Root Route
+app.get("/", (req, res) => {
+  res.send("✅ API is running...");
+});
+
+// API Routes
+app.use("/api/projects", project);
 app.use("/api/clients", clientsRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/vendors", vendorsRoutes);
 app.use("/api/time-entries", timeEntriesRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/milestones", milestoneRoutes);
+app.use("/api/project-extra", projectRoutes);
+app.use("/api/submilestones", subMilestoneRoutes);
 
+// Server Listen
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));

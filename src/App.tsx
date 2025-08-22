@@ -17,7 +17,7 @@ import NotFound from "./pages/NotFound";
 import { ProjectMaster } from "@/pages/masters/ProjectMaster";
 import { ClientMaster } from "@/pages/masters/ClientMaster";
 import { VendorMaster } from "@/pages/masters/VendorMaster";
-import { MilestoneMaster } from "@/pages/masters/MilestoneMaster";
+import MilestoneMaster from "./pages/masters/MilestoneMaster";
 import { UserMaster } from "@/pages/masters/UserMaster";
 import { TaskMaster } from "@/pages/masters/TaskMaster";  
 import { useThemeStore } from "@/store/themeStore";
