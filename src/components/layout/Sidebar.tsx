@@ -74,11 +74,11 @@ export function Sidebar() {
       <div className="p-6 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 bg-sidebar-primary rounded-lg flex items-center justify-center">
-            <span className="text-sidebar-primary-foreground font-bold">PP</span>
+            <span className="text-sidebar-primary-foreground font-bold">PMP</span>
           </div>
           <div>
-            <h2 className="text-sidebar-foreground font-semibold text-lg">PMP</h2>
-            <p className="text-sidebar-foreground/70 text-xs">Project Management System</p>
+            <h2 className="text-sidebar-foreground font-semibold text-lg"></h2>
+            <p className="text-sidebar-foreground/70 text-xs font-bold">Project Management System</p>
           </div>
         </div>
       </div>
