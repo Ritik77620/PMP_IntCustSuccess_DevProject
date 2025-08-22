@@ -5,7 +5,7 @@ import connectDB from "./config/db.js";
 
 // Import Routes
 import project from "./routes/projects.js";
-import clientsRoutes from "./routes/Clinets.js";   // fixed spelling (Clinets → clients)
+import clientsRoutes from "./routes/clientRoutes.js";   
 import usersRoutes from "./routes/users.js";
 import vendorsRoutes from "./routes/vendors.js";
 import timeEntriesRoutes from "./routes/timeEntries.js";
