@@ -46,7 +46,7 @@ export function TicketingSystem() {
     timeClosed: "",
   });
 
-  // Utility: generate ticket number based on DDMMYYYYHHMM
+  // Generate ticket number based on DDMMYYYYHHMM
   const generateTicketNumber = () => {
     const now = new Date();
     const dd = String(now.getDate()).padStart(2, "0");
@@ -57,14 +57,19 @@ export function TicketingSystem() {
     return `${dd}${mm}${yyyy}${hh}${min}`;
   };
 
-  // Utility: calculate days between start and end
-  const calculateElapsedDays = (startDate: string, startTime: string, endDate: string, endTime: string) => {
+  // Calculate days between start and end
+  const calculateElapsedDays = (
+    startDate: string,
+    startTime: string,
+    endDate: string,
+    endTime: string
+  ) => {
     if (!startDate || !startTime || !endDate || !endTime) return "";
     const start = new Date(`${startDate}T${startTime}`);
     const end = new Date(`${endDate}T${endTime}`);
     const diffMs = end.getTime() - start.getTime();
     if (diffMs < 0) return "0";
-    return (diffMs / (1000 * 60 * 60 * 24)).toFixed(2); // days with 2 decimals
+    return (diffMs / (1000 * 60 * 60 * 24)).toFixed(2);
   };
 
   // Handle form input changes
@@ -72,7 +77,7 @@ export function TicketingSystem() {
     const { name, value } = e.target;
     let updatedForm = { ...form, [name]: value };
 
-    // Auto calculate elapsed days if closed date/time is updated
+    // Auto-calc elapsed days when status set to Closed or close fields change
     if (name === "dateClosed" || name === "timeClosed" || name === "status") {
       if (updatedForm.status === "Closed") {
         updatedForm.totalDaysElapsed = calculateElapsedDays(
@@ -81,8 +86,12 @@ export function TicketingSystem() {
           updatedForm.dateClosed,
           updatedForm.timeClosed
         );
+      } else {
+        // If not closed, keep elapsed empty
+        updatedForm.totalDaysElapsed = "";
       }
     }
+
     setForm(updatedForm);
   };
 
@@ -92,10 +101,14 @@ export function TicketingSystem() {
     const today = now.toISOString().split("T")[0]; // yyyy-mm-dd
     const currentTime = now.toTimeString().slice(0, 5); // HH:MM
 
+    // ✅ Only generate ticket number when creating a new ticket
+    const ticketNumber =
+      editingIndex !== null ? form.ticketNumber : generateTicketNumber();
+
     let newTicket: Ticket = {
       ...form,
       id: form.id || Date.now().toString(),
-      ticketNumber: form.ticketNumber || generateTicketNumber(),
+      ticketNumber,
       dateRaised: form.dateRaised || today,
       timeRaised: form.timeRaised || currentTime,
     };
@@ -142,13 +155,35 @@ export function TicketingSystem() {
   // Edit ticket
   const handleEdit = (index: number) => {
     setEditingIndex(index);
-    setForm(tickets[index]);
+    setForm(tickets[index]); // contains existing ticketNumber
   };
 
   // Delete ticket
   const handleDelete = (index: number) => {
     const updatedTickets = tickets.filter((_, i) => i !== index);
     setTickets(updatedTickets);
+    // If we were editing this row, reset edit state
+    if (editingIndex === index) {
+      setEditingIndex(null);
+      setForm({
+        id: "",
+        ticketNumber: "",
+        clientName: "",
+        location: "",
+        dateRaised: "",
+        timeRaised: "",
+        category: "Issue",
+        raisedBy: "",
+        assignedTo: "",
+        description: "",
+        totalDaysElapsed: "",
+        status: "Open",
+        priority: "Medium",
+        resolution: "",
+        dateClosed: "",
+        timeClosed: "",
+      });
+    }
   };
 
   // Export to Excel
@@ -179,7 +214,18 @@ export function TicketingSystem() {
             {editingIndex !== null ? "Edit Ticket" : "Add Ticket"}
           </CardTitle>
         </CardHeader>
+
         <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Read-only Ticket Number (visible when editing OR if preset in form) */}
+          <input
+            type="text"
+            name="ticketNumber"
+            value={form.ticketNumber}
+            readOnly
+            className="input-field border-blue-300 bg-gray-100 cursor-not-allowed"
+            placeholder="Ticket Number (generated on save)"
+          />
+
           {[
             { name: "clientName", placeholder: "Client Name" },
             { name: "location", placeholder: "Location" },
@@ -197,12 +243,12 @@ export function TicketingSystem() {
               <select
                 key={field.name}
                 name={field.name}
-                value={form[field.name as keyof Ticket]}
+                value={form[field.name as keyof Ticket] as string}
                 onChange={handleChange}
                 className="input-field border-blue-300"
               >
                 {field.options!.map((opt) => (
-                  <option key={opt}>{opt}</option>
+                  <option key={opt} value={opt}>{opt}</option>
                 ))}
               </select>
             ) : (
@@ -210,7 +256,7 @@ export function TicketingSystem() {
                 key={field.name}
                 type={field.type || "text"}
                 name={field.name}
-                value={form[field.name as keyof Ticket]}
+                value={form[field.name as keyof Ticket] as string}
                 onChange={handleChange}
                 placeholder={field.placeholder}
                 className="input-field border-blue-300"
@@ -248,6 +294,7 @@ export function TicketingSystem() {
             placeholder="Total Days Elapsed"
           />
         </CardContent>
+
         <CardContent>
           <Button onClick={handleSubmit} className="gradient-primary">
             {editingIndex !== null ? "Update Ticket" : "Add Ticket"}
@@ -282,9 +329,7 @@ export function TicketingSystem() {
                   "Time Closed",
                   "Actions",
                 ].map((h) => (
-                  <th key={h} className="p-2 text-left border">
-                    {h}
-                  </th>
+                  <th key={h} className="p-2 text-left border">{h}</th>
                 ))}
               </tr>
             </thead>
