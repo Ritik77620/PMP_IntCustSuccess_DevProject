@@ -29,11 +29,11 @@ export function Header() {
       <div className="flex h-16 items-center px-6 gap-4">
         {/* Logo */}
         <div className="flex items-center gap-3">
-          <div className="h-8 w-8 gradient-primary rounded-lg flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-sm">PP</span>
+          <div className="h-8 w-20 gradient-primary rounded-lg flex items-center justify-center">
+            <span className="text-primary-foreground font-bold text-sm">PPTPL</span>
           </div>
           <h1 className="font-semibold text-lg hidden sm:block">
-            Power Profit Technologies
+            Power Profit Technologies Pvt Ltd
           </h1>
         </div>
 
