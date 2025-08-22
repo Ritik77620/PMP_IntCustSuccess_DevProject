@@ -62,8 +62,8 @@ export function LoginPage() {
       >
         <Card className="shadow-elegant">
           <CardHeader className="text-center">
-            <div className="mx-auto h-12 w-12 gradient-primary rounded-xl flex items-center justify-center mb-4">
-              <span className="text-primary-foreground font-bold text-xl">PP</span>
+            <div className="mx-auto h-12 w-20 gradient-primary rounded-xl flex items-center justify-center mb-4">
+              <span className="text-primary-foreground font-bold text-xl">PPTPL</span>
             </div>
             <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
             <CardDescription>
