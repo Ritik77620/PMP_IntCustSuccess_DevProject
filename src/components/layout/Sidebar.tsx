@@ -35,7 +35,7 @@ const navigationItems = [
     badge: '3',
   },
   {
-    title: 'Reports & Analytics',
+    title: 'Ticket Tracker',
     href: '/reports',
     icon: BarChart3,
     badge: null,
