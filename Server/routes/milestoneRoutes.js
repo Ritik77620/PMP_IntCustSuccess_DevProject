@@ -3,19 +3,69 @@ import Milestone from "../models/Milestone.js";
 
 const router = express.Router();
 
+// GET all milestones sorted by sequence ascending
+router.get("/", async (req, res) => {
+  try {
+    const milestones = await Milestone.find().sort({ sequence: 1 });
+    // Map to frontend-friendly format
+    const data = milestones.map(m => ({
+      id: m._id.toString(),
+      name: m.name,
+      sequence: m.sequence
+    }));
+    res.json(data);
+  } catch (error) {
+    console.error("Milestone GET error:", error);
+    res.status(500).json({ message: "Failed to fetch milestones" });
+  }
+});
+
+// POST add new milestone
 router.post("/", async (req, res) => {
   try {
     const { name, sequence } = req.body;
     if (!name || sequence === undefined) {
       return res.status(400).json({ message: "Name and sequence are required" });
     }
-
     const milestone = new Milestone({ name, sequence });
     await milestone.save();
-    res.status(201).json({ id: milestone._id, name: milestone.name, sequence: milestone.sequence });
+    res.status(201).json({ id: milestone._id.toString(), name: milestone.name, sequence: milestone.sequence });
   } catch (error) {
-    console.error("Milestone create error:", error);
-    res.status(500).json({ message: "Internal server error" });
+    console.error("Milestone POST error:", error);
+    res.status(500).json({ message: "Failed to save milestone" });
+  }
+});
+
+// PUT update milestone by id
+router.put("/:id", async (req, res) => {
+  try {
+    const { name, sequence } = req.body;
+    if (!name || sequence === undefined) {
+      return res.status(400).json({ message: "Name and sequence are required" });
+    }
+    const milestone = await Milestone.findByIdAndUpdate(
+      req.params.id,
+      { name, sequence },
+      { new: true }
+    );
+    if (!milestone) {
+      return res.status(404).json({ message: "Milestone not found" });
+    }
+    res.json({ id: milestone._id.toString(), name: milestone.name, sequence: milestone.sequence });
+  } catch (error) {
+    console.error("Milestone PUT error:", error);
+    res.status(500).json({ message: "Failed to update milestone" });
+  }
+});
+
+// DELETE milestone by id
+router.delete("/:id", async (req, res) => {
+  try {
+    await Milestone.findByIdAndDelete(req.params.id);
+    res.json({ message: "Milestone deleted" });
+  } catch (error) {
+    console.error("Milestone DELETE error:", error);
+    res.status(500).json({ message: "Failed to delete milestone" });
   }
 });
 

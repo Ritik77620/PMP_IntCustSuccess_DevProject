@@ -28,33 +28,59 @@ export default function MilestoneMaster() {
   const [showMileForm, setShowMileForm] = useState(false);
   const [showSubForm, setShowSubForm] = useState(false);
 
-  // Fetch milestones from backend API
+  // Fetch all milestones
   const fetchMilestones = async () => {
     try {
       const res = await fetch("http://localhost:5001/api/milestones");
       if (!res.ok) throw new Error("Failed to fetch milestones");
       const data = await res.json();
       setMilestones(data);
-    } catch (err) {
-      console.error("Failed to fetch milestones", err);
+    } catch (error) {
+      console.error("Error fetching milestones:", error);
     }
   };
 
-  // Fetch sub-milestones from backend API
+  // Fetch all sub-milestones
   const fetchSubMilestones = async () => {
     try {
       const res = await fetch("http://localhost:5001/api/submilestones");
-      if (!res.ok) throw new Error("Failed to fetch submilestones");
+      if (!res.ok) throw new Error("Failed to fetch sub-milestones");
       const data = await res.json();
       setSubMilestones(data);
-    } catch (err) {
-      console.error("Failed to fetch submilestones", err);
+    } catch (error) {
+      console.error("Error fetching sub-milestones:", error);
     }
   };
 
-  // Save milestone (Create or Update)
+  useEffect(() => {
+    fetchMilestones();
+    fetchSubMilestones();
+  }, []);
+
+  // Handle input changes for milestone form
+  const handleMileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setMileForm(prev => ({
+      ...prev,
+      [name]: name === "sequence" ? Number(value) : value,
+    }));
+  };
+
+  // Handle input changes for sub-milestone form
+  const handleSubChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setSubForm(prev => ({
+      ...prev,
+      [name]: name === "sequence" ? Number(value) : value,
+    }));
+  };
+
+  // Save or update milestone
   const handleMileSave = async () => {
-    if (!mileForm.name) return;
+    if (!mileForm.name) {
+      alert("Milestone Name is required");
+      return;
+    }
 
     try {
       const method = mileForm.id ? "PUT" : "POST";
@@ -65,22 +91,24 @@ export default function MilestoneMaster() {
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: mileForm.name, sequence: Number(mileForm.sequence) }),
+        body: JSON.stringify({ name: mileForm.name, sequence: mileForm.sequence }),
       });
-
       if (!res.ok) throw new Error("Failed to save milestone");
 
       setMileForm({ id: "", name: "", sequence: 0 });
       setShowMileForm(false);
       fetchMilestones();
-    } catch (err: any) {
-      alert(err.message);
+    } catch (error: any) {
+      alert(error.message);
     }
   };
 
-  // Save sub-milestone (Create or Update)
+  // Save or update sub-milestone
   const handleSubSave = async () => {
-    if (!subForm.name || !subForm.milestoneId) return;
+    if (!subForm.name || !subForm.milestoneId) {
+      alert("Sub-Milestone name and parent Milestone are required");
+      return;
+    }
 
     try {
       const method = subForm.id ? "PUT" : "POST";
@@ -94,87 +122,72 @@ export default function MilestoneMaster() {
         body: JSON.stringify({
           name: subForm.name,
           milestoneId: subForm.milestoneId,
-          sequence: Number(subForm.sequence),
+          sequence: subForm.sequence,
         }),
       });
-
       if (!res.ok) throw new Error("Failed to save sub-milestone");
 
       setSubForm({ id: "", name: "", milestoneId: "", sequence: 0 });
       setShowSubForm(false);
       fetchSubMilestones();
-    } catch (err: any) {
-      alert(err.message);
+    } catch (error: any) {
+      alert(error.message);
     }
   };
 
   // Delete milestone
   const handleMileDelete = async (id: string) => {
-    if (!confirm("Delete this milestone?")) return;
+    if (!confirm("Are you sure you want to delete this milestone?")) return;
     try {
       const res = await fetch(`http://localhost:5001/api/milestones/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Delete failed");
       fetchMilestones();
-    } catch (err: any) {
-      alert(err.message);
+    } catch (error: any) {
+      alert(error.message);
     }
   };
 
   // Delete sub-milestone
   const handleSubDelete = async (id: string) => {
-    if (!confirm("Delete this sub-milestone?")) return;
+    if (!confirm("Are you sure you want to delete this sub-milestone?")) return;
     try {
       const res = await fetch(`http://localhost:5001/api/submilestones/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Delete failed");
       fetchSubMilestones();
-    } catch (err: any) {
-      alert(err.message);
+    } catch (error: any) {
+      alert(error.message);
     }
   };
 
   // Edit milestone
   const handleMileEdit = (id: string) => {
-    const m = milestones.find((x) => x.id === id);
-    if (m) {
-      setMileForm(m);
+    const milestone = milestones.find(m => m.id === id);
+    if (milestone) {
+      setMileForm(milestone);
       setShowMileForm(true);
     }
   };
 
   // Edit sub-milestone
   const handleSubEdit = (id: string) => {
-    const s = subMilestones.find((x) => x.id === id);
-    if (s) {
-      setSubForm(s);
+    const submilestone = subMilestones.find(s => s.id === id);
+    if (submilestone) {
+      setSubForm(submilestone);
       setShowSubForm(true);
     }
-  };
-
-  // On mount, fetch data
-  useEffect(() => {
-    fetchMilestones();
-    fetchSubMilestones();
-  }, []);
-
-  const handleMileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setMileForm({ ...mileForm, [e.target.name]: e.target.name === "sequence" ? Number(e.target.value) : e.target.value });
-  };
-
-  const handleSubChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setSubForm({ ...subForm, [e.target.name]: e.target.name === "sequence" ? Number(e.target.value) : e.target.value });
   };
 
   return (
     <div className="space-y-10 p-6">
       <h1 className="text-2xl font-bold">Milestone & Sub-Milestone Master</h1>
 
-      {/* ======================== MILESTONE ======================== */}
+      {/* Milestones Section */}
       <Card>
         <CardHeader>
           <CardTitle>Milestones</CardTitle>
         </CardHeader>
         <CardContent>
-          <Button className="mb-4" onClick={() => setShowMileForm(true)}>
+          <Button onClick={() => setShowMileForm(true)} className="mb-4">
             + Add New Milestone
           </Button>
 
@@ -184,7 +197,12 @@ export default function MilestoneMaster() {
                 <CardTitle>{mileForm.id ? "Edit Milestone" : "Add New Milestone"}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Input name="name" placeholder="Milestone Name" value={mileForm.name} onChange={handleMileChange} />
+                <Input
+                  name="name"
+                  placeholder="Milestone Name"
+                  value={mileForm.name}
+                  onChange={handleMileChange}
+                />
                 <Input
                   name="sequence"
                   type="number"
@@ -211,7 +229,7 @@ export default function MilestoneMaster() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {milestones.map((m) => (
+              {milestones.map(m => (
                 <TableRow key={m.id}>
                   <TableCell>{m.name}</TableCell>
                   <TableCell>{m.sequence}</TableCell>
@@ -230,13 +248,13 @@ export default function MilestoneMaster() {
         </CardContent>
       </Card>
 
-      {/* ======================== SUB-MILESTONE ======================== */}
+      {/* Sub-Milestones Section */}
       <Card>
         <CardHeader>
           <CardTitle>Sub-Milestones</CardTitle>
         </CardHeader>
         <CardContent>
-          <Button className="mb-4" onClick={() => setShowSubForm(true)}>
+          <Button onClick={() => setShowSubForm(true)} className="mb-4">
             + Add New Sub-Milestone
           </Button>
 
@@ -246,7 +264,12 @@ export default function MilestoneMaster() {
                 <CardTitle>{subForm.id ? "Edit Sub-Milestone" : "Add Sub-Milestone"}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Input name="name" placeholder="Sub-Milestone Name" value={subForm.name} onChange={handleSubChange} />
+                <Input
+                  name="name"
+                  placeholder="Sub-Milestone Name"
+                  value={subForm.name}
+                  onChange={handleSubChange}
+                />
                 <select
                   name="milestoneId"
                   className="border rounded p-2 w-full"
@@ -254,7 +277,7 @@ export default function MilestoneMaster() {
                   onChange={handleSubChange}
                 >
                   <option value="">Select Milestone</option>
-                  {milestones.map((m) => (
+                  {milestones.map(m => (
                     <option key={m.id} value={m.id}>
                       {m.name}
                     </option>
@@ -287,10 +310,10 @@ export default function MilestoneMaster() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {subMilestones.map((s) => (
+              {subMilestones.map(s => (
                 <TableRow key={s.id}>
                   <TableCell>{s.name}</TableCell>
-                  <TableCell>{milestones.find((m) => m.id === s.milestoneId)?.name || "—"}</TableCell>
+                  <TableCell>{milestones.find(m => m.id === s.milestoneId)?.name || "—"}</TableCell>
                   <TableCell>{s.sequence}</TableCell>
                   <TableCell className="space-x-2">
                     <Button size="sm" onClick={() => handleSubEdit(s.id)}>
