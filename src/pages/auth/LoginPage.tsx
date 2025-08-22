@@ -21,7 +21,6 @@ export function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate API call
     setTimeout(() => {
       const user = mockUsers.find(u => u.email === email);
       
@@ -53,12 +52,21 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/5">
+    <div className="relative min-h-screen flex items-center justify-center">
+      {/* Background Image (fit to screen) */}
+      <div
+        className="absolute inset-0 bg-no-repeat bg-center bg-stretech bg-cover"
+        style={{ backgroundImage: "url('/OrganizationLogo.png')" }}
+      />
+      {/* Overlay for readability */}
+      <div className="absolute inset-0 bg-black/40" />
+
+      {/* Login Card */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="w-full max-w-md"
+        className="relative z-10 w-full max-w-md"
       >
         <Card className="shadow-elegant">
           <CardHeader className="text-center">
