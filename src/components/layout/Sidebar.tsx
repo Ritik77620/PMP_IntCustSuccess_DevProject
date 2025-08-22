@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -9,6 +10,7 @@ import {
   Database,
   LogOut,
   ChevronRight,
+  Menu,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
@@ -16,12 +18,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
 const navigationItems = [
-  {
+  /*{
     title: 'Dashboard',
     href: '/',
     icon: LayoutDashboard,
     badge: null,
-  },
+  },*/
   {
     title: 'Projects',
     href: '/projects',
@@ -63,35 +65,55 @@ const userItems = [
 
 export function Sidebar() {
   const { user, logout } = useAuthStore();
+  const [collapsed, setCollapsed] = useState(false);
 
-  const handleLogout = () => {
-    logout();
-  };
+  const handleToggle = () => setCollapsed(!collapsed);
 
   return (
-    <div className="w-64 h-screen gradient-primary flex flex-col shadow-elegant">
-      {/* Logo Section */}
-      <div className="p-6 border-b border-sidebar-border">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 bg-sidebar-primary rounded-lg flex items-center justify-center">
-            <span className="text-sidebar-primary-foreground font-bold">PMP</span>
-          </div>
-          <div>
-            <h2 className="text-sidebar-foreground font-semibold text-lg"></h2>
-            <p className="text-sidebar-foreground/70 text-xs font-bold">Project Management System</p>
-          </div>
-        </div>
+    <div
+      className={cn(
+        'h-screen gradient-primary flex flex-col shadow-elegant transition-width duration-300',
+        collapsed ? 'w-20' : 'w-64'
+      )}
+    >
+      {/* Toggle Button */}
+      <div className="p-2 flex justify-end border-b border-sidebar-border">
+        <Button variant="ghost" onClick={handleToggle} className="p-1">
+          <Menu className="h-5 w-5 text-sidebar-foreground" />
+        </Button>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 px-4 py-6 space-y-2">
+      {/* Logo Section */}
+      <div className="p-6 border-b border-sidebar-border flex items-center gap-3">
+        <div className="h-10 w-10 bg-sidebar-primary rounded-lg flex items-center justify-center">
+          <span
+            className={cn(
+              'text-sidebar-primary-foreground font-bold transition-all duration-300',
+              collapsed ? 'hidden' : 'inline'
+            )}
+          >
+            PMP
+          </span>
+        </div>
+        {!collapsed && (
+          <div>
+            <h2 className="text-sidebar-foreground font-semibold text-lg"></h2>
+            <p className="text-sidebar-foreground/70 text-xs font-bold">
+              Project Management System
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Navigation (scrollable) */}
+      <nav className="flex-1 px-2 py-4 space-y-2 overflow-y-auto">
         {navigationItems.map((item) => (
           <NavLink
             key={item.href}
             to={item.href}
             className={({ isActive }) =>
               cn(
-                'flex items-center gap-3 px-4 py-3 rounded-lg transition-smooth group',
+                'flex items-center gap-3 px-3 py-2 rounded-lg transition-smooth group',
                 'hover:bg-sidebar-accent hover:shadow-glow',
                 isActive
                   ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-glow'
@@ -102,16 +124,18 @@ export function Sidebar() {
             {({ isActive }) => (
               <>
                 <item.icon className="h-5 w-5" />
-                <span className="font-medium">{item.title}</span>
-                {item.badge && (
-                  <Badge 
-                    variant={isActive ? "secondary" : "outline"} 
+                {!collapsed && <span className="font-medium">{item.title}</span>}
+                {!collapsed && item.badge && (
+                  <Badge
+                    variant={isActive ? 'secondary' : 'outline'}
                     className="ml-auto text-xs"
                   >
                     {item.badge}
                   </Badge>
                 )}
-                <ChevronRight className="h-4 w-4 ml-auto group-hover:translate-x-1 transition-transform" />
+                {!collapsed && (
+                  <ChevronRight className="h-4 w-4 ml-auto group-hover:translate-x-1 transition-transform" />
+                )}
               </>
             )}
           </NavLink>
@@ -119,54 +143,62 @@ export function Sidebar() {
       </nav>
 
       {/* User Section */}
-      <div className="p-4 border-t border-sidebar-border space-y-2">
-        {userItems.map((item) => (
-          <NavLink
-            key={item.href}
-            to={item.href}
-            className={({ isActive }) =>
-              cn(
-                'flex items-center gap-3 px-4 py-2 rounded-lg transition-smooth',
-                'hover:bg-sidebar-accent',
-                isActive
-                  ? 'bg-sidebar-primary text-sidebar-primary-foreground'
-                  : 'text-sidebar-foreground hover:text-sidebar-accent-foreground'
-              )
-            }
+      {!collapsed && (
+        <div className="p-4 border-t border-sidebar-border space-y-2">
+          {userItems.map((item) => (
+            <NavLink
+              key={item.href}
+              to={item.href}
+              className={({ isActive }) =>
+                cn(
+                  'flex items-center gap-3 px-4 py-2 rounded-lg transition-smooth',
+                  'hover:bg-sidebar-accent',
+                  isActive
+                    ? 'bg-sidebar-primary text-sidebar-primary-foreground'
+                    : 'text-sidebar-foreground hover:text-sidebar-accent-foreground'
+                )
+              }
+            >
+              <item.icon className="h-4 w-4" />
+              <span>{item.title}</span>
+            </NavLink>
+          ))}
+
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-3 px-4 py-2 text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
+            onClick={logout}
           >
-            <item.icon className="h-4 w-4" />
-            <span>{item.title}</span>
-          </NavLink>
-        ))}
-        
-        <Button
-          variant="ghost"
-          className="w-full justify-start gap-3 px-4 py-2 text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
-          onClick={handleLogout}
-        >
-          <LogOut className="h-4 w-4" />
-          <span>Sign Out</span>
-        </Button>
-      </div>
+            <LogOut className="h-4 w-4" />
+            <span>Sign Out</span>
+          </Button>
+        </div>
+      )}
 
       {/* User Info */}
-      <div className="p-4 border-t border-sidebar-border">
-        <div className="flex items-center gap-3">
-          <div className="h-8 w-8 bg-sidebar-primary rounded-full flex items-center justify-center">
-            <span className="text-sidebar-primary-foreground text-sm font-medium">
-              {user?.name?.split(' ').map(n => n[0]).join('').toUpperCase()}
-            </span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sidebar-foreground text-sm font-medium truncate">
-              {user?.name}
-            </p>
-            <p className="text-sidebar-foreground/70 text-xs truncate">
-              {user?.designation}
-            </p>
+      {!collapsed && (
+        <div className="p-4 border-t border-sidebar-border">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 bg-sidebar-primary rounded-full flex items-center justify-center">
+              <span className="text-sidebar-primary-foreground text-sm font-medium">
+                {user?.name
+                  ?.split(' ')
+                  .map((n) => n[0])
+                  .join('')
+                  .toUpperCase()}
+              </span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sidebar-foreground text-sm font-medium truncate">
+                {user?.name}
+              </p>
+              <p className="text-sidebar-foreground/70 text-xs truncate">
+                {user?.designation}
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
