@@ -77,8 +77,8 @@ export function Sidebar() {
             <span className="text-sidebar-primary-foreground font-bold">PP</span>
           </div>
           <div>
-            <h2 className="text-sidebar-foreground font-semibold text-lg">PMS</h2>
-            <p className="text-sidebar-foreground/70 text-xs">Project Management</p>
+            <h2 className="text-sidebar-foreground font-semibold text-lg">PMP</h2>
+            <p className="text-sidebar-foreground/70 text-xs">Project Management System</p>
           </div>
         </div>
       </div>
