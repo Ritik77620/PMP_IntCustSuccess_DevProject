@@ -13,6 +13,7 @@ import taskRoutes from "./routes/taskRoutes.js";
 import milestoneRoutes from "./routes/milestoneRoutes.js";
 import projectRoutes from "./routes/ProjectRouts.js";
 import subMilestoneRoutes from "./routes/subMilestoneRoutes.js";
+import ticketRoutes from "./routes/tickets.js";
 // Load environment variables
 dotenv.config();
 
@@ -41,6 +42,7 @@ app.use("/api/tasks", taskRoutes);
 app.use("/api/milestones", milestoneRoutes);
 app.use("/api/project-extra", projectRoutes);
 app.use("/api/submilestones", subMilestoneRoutes);
+app.use("/api/tickets", ticketRoutes);
 
 // Server Listen
 const PORT = process.env.PORT || 5000;
