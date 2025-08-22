@@ -33,12 +33,12 @@ interface Project {
   milestone: string;     // Milestone
   planStart: string;     // Plan Start (ISO string)
   planClose: string;     // Plan Close (ISO string)
-  actualStart: string;   // Actual Start (ISO string)
-  actualClose: string;   // Actual Close (ISO string)
+  actualStart?: string;   // Actual Start (ISO string) optional
+  actualClose?: string;   // Actual Close (ISO string) optional
   status: Status;        // Status
-  bottleneck: string;    // Bottleneck
-  remark: string;        // Remark
-  progress: number;      // Progress 0-100
+  bottleneck?: string;    // Bottleneck optional
+  remark?: string;        // Remark optional
+  progress: number;       // Progress 0-100
 }
 
 const statusColors = {
@@ -87,9 +87,13 @@ export function Projects() {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
+
     if (name === "progress") {
       const num = Number(value);
-      setFormData((s) => ({ ...s, progress: isNaN(num) ? 0 : Math.min(100, Math.max(0, num)) }));
+      setFormData((s) => ({
+        ...s,
+        progress: isNaN(num) ? 0 : Math.min(100, Math.max(0, num)),
+      }));
     } else if (name === "status") {
       setFormData((s) => ({ ...s, status: value as Status }));
     } else {
@@ -114,6 +118,20 @@ export function Projects() {
 
   const handleSubmit = async () => {
     try {
+      if (
+        !formData.name ||
+        !formData.client ||
+        !formData.milestone ||
+        !formData.planStart ||
+        !formData.planClose
+      ) {
+        alert(
+          "Please fill in required fields: Project, Client, Milestone, Plan Start, Plan Close."
+        );
+        return;
+      }
+
+      // Sending formData as-is; actualStart, actualClose, bottleneck, remark can be empty strings
       if (editingId) {
         await api.put(`/api/projects/${editingId}`, formData);
       } else {
@@ -130,8 +148,7 @@ export function Projects() {
   };
 
   const handleView = (project: Project) => {
-    const fmt = (d?: string) =>
-      d ? new Date(d).toLocaleDateString() : "-";
+    const fmt = (d?: string) => (d ? new Date(d).toLocaleDateString() : "-");
     alert(
       [
         `Project: ${project.name}`,
@@ -142,17 +159,17 @@ export function Projects() {
         `Actual Start: ${fmt(project.actualStart)}`,
         `Actual Close: ${fmt(project.actualClose)}`,
         `Status: ${project.status}`,
-        `Bottleneck: ${project.bottleneck}`,
-        `Remark: ${project.remark}`,
+        `Bottleneck: ${project.bottleneck || "-"}`,
+        `Remark: ${project.remark || "-"}`,
         `Progress: ${project.progress}%`,
       ].join("\n")
     );
   };
 
   const handleEdit = (project: Project) => {
-    // Convert ISO -> yyyy-mm-dd for date inputs
-    const toDateInput = (iso: string) =>
+    const toDateInput = (iso?: string) =>
       iso ? new Date(iso).toISOString().split("T")[0] : "";
+
     setFormData({
       name: project.name,
       client: project.client,
@@ -162,8 +179,8 @@ export function Projects() {
       actualStart: toDateInput(project.actualStart),
       actualClose: toDateInput(project.actualClose),
       status: project.status,
-      bottleneck: project.bottleneck,
-      remark: project.remark,
+      bottleneck: project.bottleneck || "",
+      remark: project.remark || "",
       progress: project.progress,
     });
     setEditingId(project._id);
@@ -193,17 +210,32 @@ export function Projects() {
     if (!v) return <span>-</span>;
     const d = new Date(v);
     return isNaN(d.getTime()) ? <span>-</span> : <span>{d.toLocaleDateString()}</span>;
-    // If backend returns date-only strings (yyyy-mm-dd), this still renders fine
   };
 
   const columns: ColumnDef<Project>[] = [
     { accessorKey: "name", header: "Project" },
     { accessorKey: "client", header: "Client" },
     { accessorKey: "milestone", header: "Milestone" },
-    { accessorKey: "planStart", header: "Plan Start", cell: ({ row }) => fmtDateCell(row.getValue("planStart")) },
-    { accessorKey: "planClose", header: "Plan Close", cell: ({ row }) => fmtDateCell(row.getValue("planClose")) },
-    { accessorKey: "actualStart", header: "Actual Start", cell: ({ row }) => fmtDateCell(row.getValue("actualStart")) },
-    { accessorKey: "actualClose", header: "Actual Close", cell: ({ row }) => fmtDateCell(row.getValue("actualClose")) },
+    {
+      accessorKey: "planStart",
+      header: "Plan Start",
+      cell: ({ row }) => fmtDateCell(row.getValue("planStart")),
+    },
+    {
+      accessorKey: "planClose",
+      header: "Plan Close",
+      cell: ({ row }) => fmtDateCell(row.getValue("planClose")),
+    },
+    {
+      accessorKey: "actualStart",
+      header: "Actual Start",
+      cell: ({ row }) => fmtDateCell(row.getValue("actualStart")),
+    },
+    {
+      accessorKey: "actualClose",
+      header: "Actual Close",
+      cell: ({ row }) => fmtDateCell(row.getValue("actualClose")),
+    },
     {
       accessorKey: "status",
       header: "Status",
@@ -244,10 +276,7 @@ export function Projects() {
             <DropdownMenuItem onClick={() => handleEdit(row.original)}>
               <Edit className="mr-2 h-4 w-4" /> Edit
             </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => handleDelete(row.original._id)}
-              className="text-destructive"
-            >
+            <DropdownMenuItem onClick={() => handleDelete(row.original._id)} className="text-destructive">
               <Trash2 className="mr-2 h-4 w-4" /> Delete
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -258,32 +287,18 @@ export function Projects() {
 
   return (
     <div className="space-y-6">
-      {/* Header + New Project Button */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        className="flex items-center justify-between"
-      >
+      {/* Header */}
+      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Projects</h1>
-          <p className="text-muted-foreground">
-            Manage and track all your projects
-          </p>
+          <p className="text-muted-foreground">Manage and track all your projects</p>
         </div>
-
-        <Button
-          onClick={() => {
-            resetForm();
-            setEditingId(null);
-            setOpen(true);
-          }}
-        >
+        <Button onClick={() => { resetForm(); setEditingId(null); setOpen(true); }}>
           <Plus className="mr-2 h-4 w-4" /> New Project
         </Button>
       </motion.div>
 
-      {/* Stats Cards: Total, Active, Planning, Completed */}
+      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
           { key: "total", label: "Total" },
@@ -293,14 +308,10 @@ export function Projects() {
         ].map(({ key, label }) => (
           <Card key={key}>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {label}
-              </CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold">
-                {stats[key as keyof typeof stats]}
-              </p>
+              <p className="text-2xl font-bold">{stats[key as keyof typeof stats]}</p>
             </CardContent>
           </Card>
         ))}
@@ -311,16 +322,10 @@ export function Projects() {
         <CardHeader>
           <CardTitle>All Projects</CardTitle>
         </CardHeader>
-        <CardContent>
-          {loading ? (
-            <p>Loading...</p>
-          ) : (
-            <DataTable columns={columns} data={projects} />
-          )}
-        </CardContent>
+        <CardContent>{loading ? <p>Loading...</p> : <DataTable columns={columns} data={projects} />}</CardContent>
       </Card>
 
-      {/* Dialog for Create/Edit Project */}
+      {/* Project Create/Edit Dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
@@ -328,121 +333,66 @@ export function Projects() {
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
-            {/* Row 1: Project, Client, Milestone */}
+            {/* Project, Client, Milestone */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {["name", "client", "milestone"].map((field) => (
                 <div key={field} className="grid gap-2">
-                  <Label htmlFor={field}>{field[0].toUpperCase() + field.slice(1)}</Label>
-                  <Input
-                    id={field}
-                    name={field}
-                    value={(formData as any)[field] ?? ""}
-                    onChange={handleChange}
-                  />
+                  <Label htmlFor={field}>{field.charAt(0).toUpperCase() + field.slice(1)}</Label>
+                  <Input id={field} name={field} value={(formData as any)[field] ?? ""} onChange={handleChange} />
                 </div>
               ))}
             </div>
 
-            {/* Row 2: Plan/Actual Dates */}
+            {/* Plan Start, Plan Close */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="planStart">Plan Start</Label>
-                <Input
-                  id="planStart"
-                  type="date"
-                  name="planStart"
-                  value={formData.planStart}
-                  onChange={handleChange}
-                />
+                <Input id="planStart" type="date" name="planStart" value={formData.planStart} onChange={handleChange} />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="planClose">Plan Close</Label>
-                <Input
-                  id="planClose"
-                  type="date"
-                  name="planClose"
-                  value={formData.planClose}
-                  onChange={handleChange}
-                />
+                <Input id="planClose" type="date" name="planClose" value={formData.planClose} onChange={handleChange} />
               </div>
             </div>
 
-            {/* Row 3: Plan/Actual Dates */}
+            {/* Actual Start, Actual Close (optional) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="actualStart">Actual Start</Label>
-                <Input
-                  id="actualStart"
-                  type="date"
-                  name="actualStart"
-                  value={formData.actualStart}
-                  onChange={handleChange}
-                />
+                <Input id="actualStart" type="date" name="actualStart" value={formData.actualStart} onChange={handleChange} />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="actualClose">Actual Close</Label>
-                <Input
-                  id="actualClose"
-                  type="date"
-                  name="actualClose"
-                  value={formData.actualClose}
-                  onChange={handleChange}
-                />
+                <Input id="actualClose" type="date" name="actualClose" value={formData.actualClose} onChange={handleChange} />
               </div>
-              
             </div>
 
-            {/* Row 4: Status, Progress */}
+            {/* Status, Progress */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="status">Status</Label>
-                <select
-                  id="status"
-                  name="status"
-                  value={formData.status}
-                  onChange={handleChange}
-                  className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                >
+                <select id="status" name="status" value={formData.status} onChange={handleChange} className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm">
                   <option value="active">Active</option>
                   <option value="planning">Planning</option>
                   <option value="completed">Completed</option>
                   <option value="on_hold">On Hold</option>
                 </select>
               </div>
-
               <div className="grid gap-2">
                 <Label htmlFor="progress">Progress (%)</Label>
-                <Input
-                  id="progress"
-                  type="number"
-                  min={0}
-                  max={100}
-                  name="progress"
-                  value={formData.progress}
-                  onChange={handleChange}
-                />
+                <Input id="progress" type="number" min={0} max={100} name="progress" value={formData.progress} onChange={handleChange} />
               </div>
             </div>
 
-            {/* Row 5: Bottleneck, Remark */}
+            {/* Bottleneck and Remark (optional) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="bottleneck">Bottleneck</Label>
-                <Input
-                  id="bottleneck"
-                  name="bottleneck"
-                  value={formData.bottleneck}
-                  onChange={handleChange}
-                />
+                <Input id="bottleneck" name="bottleneck" value={formData.bottleneck} onChange={handleChange} />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="remark">Remark</Label>
-                <Input
-                  id="remark"
-                  name="remark"
-                  value={formData.remark}
-                  onChange={handleChange}
-                />
+                <Input id="remark" name="remark" value={formData.remark} onChange={handleChange} />
               </div>
             </div>
           </div>
