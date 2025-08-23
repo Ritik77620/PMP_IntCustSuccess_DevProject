@@ -11,7 +11,7 @@ import vendorsRoutes from "./routes/vendors.js";
 import timeEntriesRoutes from "./routes/timeEntries.js";
 import taskRoutes from "./routes/taskRoutes.js";
 import milestoneRoutes from "./routes/milestoneRoutes.js";
-import projectRoutes from "./routes/ProjectRouts.js";
+import masterProjectRoutes from "./routes/masterProjectRoutes.js";
 import subMilestoneRoutes from "./routes/subMilestoneRoutes.js";
 import ticketRoutes from "./routes/tickets.js";
 // Load environment variables
@@ -40,7 +40,8 @@ app.use("/api/vendors", vendorsRoutes);
 app.use("/api/time-entries", timeEntriesRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/milestones", milestoneRoutes);
-app.use("/api/project-extra", projectRoutes);
+app.use("/api/masterprojects", masterProjectRoutes);
+
 app.use("/api/submilestones", subMilestoneRoutes);
 app.use("/api/tickets", ticketRoutes);
 

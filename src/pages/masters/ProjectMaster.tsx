@@ -5,80 +5,106 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface Project {
-  id: string;
+  _id?: string;
   projectName: string;
   projectCode: string;
-  projectDescription: string;
+  description: string;
 }
 
 export function ProjectMaster() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [form, setForm] = useState<Project>({
-    id: '',
     projectName: '',
     projectCode: '',
-    projectDescription: '',
+    description: '',
   });
 
-  const [showForm, setShowForm] = useState(false); // Control form visibility
+  const [showForm, setShowForm] = useState(false);
 
-  // Load data from localStorage
+  // Fetch projects from backend
   useEffect(() => {
-    const stored = localStorage.getItem('projects');
-    if (stored) setProjects(JSON.parse(stored));
+    fetch('http://localhost:5001/api/masterprojects')
+      .then((res) => res.json())
+      .then((data) => setProjects(data))
+      .catch((err) => console.error('Error fetching projects:', err));
   }, []);
-
-  // Save data to localStorage
-  useEffect(() => {
-    localStorage.setItem('projects', JSON.stringify(projects));
-  }, [projects]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSave = () => {
-    if (!form.projectName) return;
+  const handleSave = async () => {
+    if (!form.projectName || !form.projectCode) return;
 
-    if (form.id) {
-      setProjects(projects.map(p => (p.id === form.id ? form : p)));
+    if (form._id) {
+      // Update project
+      const res = await fetch(`http://localhost:5001/api/masterprojects/${form._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      const updated = await res.json();
+      setProjects(projects.map((p) => (p._id === updated._id ? updated : p)));
     } else {
-      setProjects([...projects, { ...form, id: Date.now().toString() }]);
+      // Create project
+      const res = await fetch('http://localhost:5001/api/masterprojects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      const newProject = await res.json();
+      setProjects([...projects, newProject]);
     }
 
-    setForm({ id: '', projectName: '', projectCode: '', projectDescription: '' });
-    setShowForm(false); // Hide form after saving
+    setForm({ projectName: '', projectCode: '', description: '' });
+    setShowForm(false);
   };
 
   const handleEdit = (id: string) => {
-    const project = projects.find(p => p.id === id);
+    const project = projects.find((p) => p._id === id);
     if (project) {
       setForm(project);
-      setShowForm(true); // Show form when editing
+      setShowForm(true);
     }
   };
 
-  const handleDelete = (id: string) => {
-    setProjects(projects.filter(p => p.id !== id));
+  const handleDelete = async (id: string) => {
+    await fetch(`http://localhost:5001/api/masterprojects/${id}`, {
+      method: 'DELETE',
+    });
+    setProjects(projects.filter((p) => p._id !== id));
   };
 
   return (
     <div className="space-y-6 p-4">
       <h1 className="text-2xl font-bold">Project Master</h1>
 
-      {/* Button to open the Add New Project form */}
       <Button onClick={() => setShowForm(true)}>+ Add New Project</Button>
 
-      {/* Form */}
       {showForm && (
         <Card>
           <CardHeader>
-            <CardTitle>{form.id ? 'Edit Project' : 'Add New Project'}</CardTitle>
+            <CardTitle>{form._id ? 'Edit Project' : 'Add New Project'}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Input name="projectName" placeholder="Project Name" value={form.projectName} onChange={handleChange} />
-            <Input name="projectCode" placeholder="Project Code" value={form.projectCode} onChange={handleChange} />
-            <Input name="projectDescription" placeholder="Project Description" value={form.projectDescription} onChange={handleChange} />
+            <Input 
+              name="projectName" 
+              placeholder="Project Name" 
+              value={form.projectName} 
+              onChange={handleChange} 
+            />
+            <Input 
+              name="projectCode" 
+              placeholder="Project Code" 
+              value={form.projectCode} 
+              onChange={handleChange} 
+            />
+            <Input 
+              name="description" 
+              placeholder="Project Description" 
+              value={form.description} 
+              onChange={handleChange} 
+            />
             <div className="flex space-x-2">
               <Button onClick={handleSave}>Save</Button>
               <Button variant="secondary" onClick={() => setShowForm(false)}>Cancel</Button>
@@ -87,7 +113,6 @@ export function ProjectMaster() {
         </Card>
       )}
 
-      {/* Projects Table */}
       <Card>
         <CardHeader>
           <CardTitle>Projects List</CardTitle>
@@ -104,13 +129,13 @@ export function ProjectMaster() {
             </TableHeader>
             <TableBody>
               {projects.map((p) => (
-                <TableRow key={p.id}>
+                <TableRow key={p._id}>
                   <TableCell>{p.projectName}</TableCell>
                   <TableCell>{p.projectCode}</TableCell>
-                  <TableCell>{p.projectDescription}</TableCell>
+                  <TableCell>{p.description}</TableCell>
                   <TableCell className="space-x-2">
-                    <Button size="sm" onClick={() => handleEdit(p.id)}>Edit</Button>
-                    <Button size="sm" variant="destructive" onClick={() => handleDelete(p.id)}>Delete</Button>
+                    <Button size="sm" onClick={() => handleEdit(p._id!)}>Edit</Button>
+                    <Button size="sm" variant="destructive" onClick={() => handleDelete(p._id!)}>Delete</Button>
                   </TableCell>
                 </TableRow>
               ))}
