@@ -6,6 +6,8 @@ const vendorSchema = new mongoose.Schema({
   vendorGst: { type: String },
   email: { type: String },
   spoc: { type: String },
-}, { timestamps: true });
+});
 
-export default mongoose.model("Vendor", vendorSchema);
+const Vendor = mongoose.model("Vendor", vendorSchema);
+
+export default Vendor;
