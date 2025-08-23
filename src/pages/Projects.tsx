@@ -241,7 +241,17 @@ export function Projects() {
       header: "Status",
       cell: ({ row }) => {
         const status = row.getValue("status") as Status;
-        return <Badge variant={statusColors[status]}>{status.replace("_", " ")}</Badge>;
+
+        // Capitalize first letter and replace underscores with spaces
+        const label = status
+          .replace(/_/g, " ")         // on_hold → on hold
+          .replace(/\b\w/g, (c) => c.toUpperCase()); // → On Hold
+
+        return (
+          <Badge variant={statusColors[status]}>
+            {label}
+          </Badge>
+        );
       },
     },
     { accessorKey: "bottleneck", header: "Bottleneck" },

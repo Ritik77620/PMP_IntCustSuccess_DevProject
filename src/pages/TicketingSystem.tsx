@@ -53,6 +53,8 @@ export function TicketingSystem() {
     timeClosed: "",
   });
 
+  const [filterText, setFilterText] = useState("");
+
   const generateTicketNumber = () => {
     const now = new Date();
     const dd = String(now.getDate()).padStart(2, "0");
@@ -149,11 +151,11 @@ export function TicketingSystem() {
         totalDaysElapsed:
           form.status === "Closed"
             ? calculateElapsedDays(
-                form.dateRaised,
-                form.timeRaised,
-                form.dateClosed,
-                form.timeClosed
-              )
+              form.dateRaised,
+              form.timeRaised,
+              form.dateClosed,
+              form.timeClosed
+            )
             : "",
       };
 
@@ -281,6 +283,13 @@ export function TicketingSystem() {
     }
   };
 
+  const filteredTickets = tickets.filter((t) =>
+    Object.values(t)
+      .join(" ")
+      .toLowerCase()
+      .includes(filterText.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -294,7 +303,34 @@ export function TicketingSystem() {
         </Button>
       </div>
 
-      {/* Add/Edit Ticket Form */}
+      {/* Status Bar */}
+      <div className="grid grid-cols-4 gap-4 mb-4">
+        <div className="p-4 bg-blue-100 rounded shadow text-center">
+          <h2 className="font-semibold">Total Tickets</h2>
+          <p className="text-xl font-bold">{tickets.length}</p>
+        </div>
+        <div className="p-4 bg-green-100 rounded shadow text-center">
+          <h2 className="font-semibold">Closed</h2>
+          <p className="text-xl font-bold">
+            {tickets.filter((t) => t.status === "Closed").length}
+          </p>
+        </div>
+        <div className="p-4 bg-red-100 rounded shadow text-center">
+          <h2 className="font-semibold">Open</h2>
+          <p className="text-xl font-bold">
+            {tickets.filter((t) => t.status === "Open").length}
+          </p>
+        </div>
+        <div className="p-4 bg-yellow-100 rounded shadow text-center">
+          <h2 className="font-semibold">On Hold</h2>
+          <p className="text-xl font-bold">
+            {tickets.filter((t) => t.status === "Hold").length}
+          </p>
+        </div>
+      </div>
+
+
+      {/* Form */}
       <Card className="border-2 border-blue-500 shadow-lg hover:shadow-xl transition-all duration-300">
         <CardHeader>
           <CardTitle className="text-blue-600 font-bold">
@@ -303,6 +339,7 @@ export function TicketingSystem() {
         </CardHeader>
 
         <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Full form fields copied from your original code */}
           {/* Ticket Number */}
           <div className="flex flex-col">
             <label className="font-semibold mb-1">Ticket Number</label>
@@ -526,6 +563,19 @@ export function TicketingSystem() {
         </CardContent>
       </Card>
 
+      {/* Filter Input */}
+      <div className="mb-4">
+        <input
+          type="text"
+          placeholder="Filter tickets..."
+          value={filterText}
+          onChange={(e) => setFilterText(e.target.value)}
+          className="input-field border-blue-300 w-full"
+        />
+      </div>
+
+
+
       {/* Tickets Table */}
       <Card>
         <CardHeader>
@@ -560,7 +610,7 @@ export function TicketingSystem() {
               </tr>
             </thead>
             <tbody>
-              {tickets.map((ticket, index) => (
+              {filteredTickets.map((ticket, index) => (
                 <tr
                   key={ticket.id}
                   className={`${editingIndex === index ? "bg-yellow-100" : ""} border-b`}
