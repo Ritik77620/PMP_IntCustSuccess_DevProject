@@ -24,7 +24,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-type Status = "active" | "planning" | "completed" | "on_hold";
+type Status = "Running" | "Completed" | "Delayed";
 
 interface Project {
   _id: string;
@@ -63,10 +63,9 @@ interface MasterProject {
 }
 
 const statusColors = {
-  active: "default",
-  planning: "secondary",
-  completed: "outline",
-  on_hold: "destructive",
+  Running: "warning",   // usually yellow
+  Completed: "success", // usually green
+  Delayed: "destructive", // usually red
 } as const;
 
 export function Projects() {
@@ -85,7 +84,7 @@ export function Projects() {
     planClose: "",
     actualStart: "",
     actualClose: "",
-    status: "active",
+    status: "Running",
     bottleneck: "",
     remark: "",
     progress: 0,
@@ -159,7 +158,7 @@ export function Projects() {
       planClose: "",
       actualStart: "",
       actualClose: "",
-      status: "active",
+      status: "Running",
       bottleneck: "",
       remark: "",
       progress: 0,
@@ -240,9 +239,9 @@ export function Projects() {
 
   const stats = {
     total: projects.length,
-    active: projects.filter((p) => p.status === "active").length,
-    planning: projects.filter((p) => p.status === "planning").length,
-    completed: projects.filter((p) => p.status === "completed").length,
+    Running: projects.filter((p) => p.status === "Running").length,
+    Completed: projects.filter((p) => p.status === "Completed").length,
+    Delayed: projects.filter((p) => p.status === "Delayed").length,
   };
 
   const fmtDateCell = (value: unknown) => {
@@ -254,11 +253,7 @@ export function Projects() {
 
   const columns: ColumnDef<Project>[] = [
     { accessorKey: "name", header: "Project" },
-    {
-      accessorKey: "client",
-      header: "Client",
-      cell: ({ row }) => row.getValue("client"),
-    },
+    { accessorKey: "client", header: "Client", cell: ({ row }) => row.getValue("client") },
     {
       accessorKey: "milestone",
       header: "Milestone",
@@ -272,12 +267,8 @@ export function Projects() {
       accessorKey: "status",
       header: "Status",
       cell: ({ row }) => {
-        const status = row.getValue("status") as string;
-        return (
-          <Badge variant={statusColors[status as Status]}>
-            {status.replace("_", " ")}
-          </Badge>
-        );
+        const status = row.getValue("status") as keyof typeof statusColors;
+        return <Badge variant={statusColors[status]}>{status}</Badge>;
       },
     },
     { accessorKey: "bottleneck", header: "Bottleneck" },
@@ -333,7 +324,7 @@ export function Projects() {
 
       {/* Colorful Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {["total", "active", "planning", "completed"].map((key) => {
+        {["total", "Running", "Completed", "Delayed"].map((key) => {
           let bgColor = "";
           let progressColor = "";
           switch (key) {
@@ -341,23 +332,23 @@ export function Projects() {
               bgColor = "bg-blue-100 text-blue-800";
               progressColor = "bg-blue-600";
               break;
-            case "active":
-              bgColor = "bg-green-100 text-green-800";
-              progressColor = "bg-green-600";
-              break;
-            case "planning":
+            case "Running":
               bgColor = "bg-yellow-100 text-yellow-800";
               progressColor = "bg-yellow-600";
               break;
-            case "completed":
-              bgColor = "bg-purple-100 text-purple-800";
-              progressColor = "bg-purple-600";
+            case "Completed":
+              bgColor = "bg-green-100 text-green-800";
+              progressColor = "bg-green-600";
+              break;
+            case "Delayed":
+              bgColor = "bg-red-100 text-red-800";
+              progressColor = "bg-red-600";
               break;
             default:
               bgColor = "bg-gray-100 text-gray-800";
               progressColor = "bg-gray-600";
           }
-          const value = stats[key as keyof typeof stats];
+          const value = stats[key as keyof typeof stats] || 0;
           const total = stats.total || 1;
           const percentage = Math.min(100, Math.round((value / total) * 100));
 
@@ -459,10 +450,9 @@ export function Projects() {
               <div className="grid gap-2">
                 <Label htmlFor="status">Status</Label>
                 <select id="status" name="status" value={formData.status} onChange={handleChange} className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm">
-                  <option value="active">Active</option>
-                  <option value="planning">Planning</option>
-                  <option value="completed">Completed</option>
-                  <option value="on_hold">On Hold</option>
+                  <option value="Running">Running</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Delayed">Delayed</option>
                 </select>
               </div>
               <div className="grid gap-2">

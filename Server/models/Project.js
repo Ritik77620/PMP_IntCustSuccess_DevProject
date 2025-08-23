@@ -13,7 +13,7 @@ const ProjectSchema = new mongoose.Schema({
   gapInDays: { type: Number },
   status: {
     type: String,
-    enum: ["active", "planning", "completed", "on_hold"],
+    enum: ["Running", "Completed", "Delayed", "on_hold"],
     default: "active",
   },
   bottleneck: { type: String },
