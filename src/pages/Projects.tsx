@@ -259,10 +259,10 @@ export function Projects() {
       header: "Milestone",
       cell: ({ row }) => milestones.find((m) => m._id === row.getValue("milestone"))?.name || row.getValue("milestone"),
     },
-    { accessorKey: "planStart", header: "Plan Start", cell: ({ row }) => fmtDateCell(row.getValue("planStart")) },
-    { accessorKey: "planClose", header: "Plan Close", cell: ({ row }) => fmtDateCell(row.getValue("planClose")) },
-    { accessorKey: "actualStart", header: "Actual Start", cell: ({ row }) => fmtDateCell(row.getValue("actualStart")) },
-    { accessorKey: "actualClose", header: "Actual Close", cell: ({ row }) => fmtDateCell(row.getValue("actualClose")) },
+    { accessorKey: "planStart", header: "Plan Start Date", cell: ({ row }) => fmtDateCell(row.getValue("planStart")) },
+    { accessorKey: "planClose", header: "Plan End Date", cell: ({ row }) => fmtDateCell(row.getValue("planClose")) },
+    { accessorKey: "actualStart", header: "Actual Start Date", cell: ({ row }) => fmtDateCell(row.getValue("actualStart")) },
+    { accessorKey: "actualClose", header: "Actual End Date", cell: ({ row }) => fmtDateCell(row.getValue("actualClose")) },
     {
       accessorKey: "status",
       header: "Status",
@@ -432,19 +432,19 @@ export function Projects() {
             {/* Dates, Status, Progress, Bottleneck, Remark */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="planStart">Plan Start</Label>
+                <Label htmlFor="planStart">Plan Start Date</Label>
                 <Input id="planStart" type="date" name="planStart" value={formData.planStart} onChange={handleChange} />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="planClose">Plan Close</Label>
+                <Label htmlFor="planClose">Plan End Date</Label>
                 <Input id="planClose" type="date" name="planClose" value={formData.planClose} onChange={handleChange} />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="actualStart">Actual Start</Label>
+                <Label htmlFor="actualStart">Actual Start Date</Label>
                 <Input id="actualStart" type="date" name="actualStart" value={formData.actualStart} onChange={handleChange} />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="actualClose">Actual Close</Label>
+                <Label htmlFor="actualClose">Actual End Date</Label>
                 <Input id="actualClose" type="date" name="actualClose" value={formData.actualClose} onChange={handleChange} />
               </div>
               <div className="grid gap-2">
