@@ -25,8 +25,14 @@ interface Ticket {
   timeClosed: string;
 }
 
+interface Client {
+  name: string;
+  location: string;
+}
+
 export function TicketingSystem() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [form, setForm] = useState<Ticket>({
     id: "",
@@ -82,8 +88,22 @@ export function TicketingSystem() {
     }
   };
 
+  const loadClients = async () => {
+    try {
+      const res = await fetch("http://localhost:5001/api/clients");
+      if (!res.ok) throw new Error("Failed to fetch clients");
+      const data = await res.json();
+      setClients(
+        data.map((c: any) => ({ name: c.clientName, location: c.clientLocation }))
+      );
+    } catch (error) {
+      console.error("Error loading clients:", error);
+    }
+  };
+
   useEffect(() => {
     loadTickets();
+    loadClients();
   }, []);
 
   const handleChange = (
@@ -91,6 +111,11 @@ export function TicketingSystem() {
   ) => {
     const { name, value } = e.target;
     let updatedForm = { ...form, [name]: value };
+
+    if (name === "clientName") {
+      const client = clients.find((c) => c.name === value);
+      updatedForm.location = client ? client.location : "";
+    }
 
     if (name === "dateClosed" || name === "timeClosed" || name === "status") {
       if (updatedForm.status === "Closed") {
@@ -230,9 +255,34 @@ export function TicketingSystem() {
     saveAs(data, "tickets.xlsx");
   };
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "Closed":
+        return "bg-green-600";
+      case "Open":
+        return "bg-red-400";
+      case "Hold":
+        return "bg-yellow-400";
+      default:
+        return "";
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case "High":
+        return "bg-red-400";
+      case "Medium":
+        return "bg-orange-400";
+      case "Low":
+        return "bg-yellow-400";
+      default:
+        return "";
+    }
+  };
+
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Ticketing System</h1>
         <Button
@@ -253,100 +303,220 @@ export function TicketingSystem() {
         </CardHeader>
 
         <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <input
-            type="text"
-            name="ticketNumber"
-            value={form.ticketNumber}
-            readOnly
-            className="input-field border-blue-300 bg-gray-100 cursor-not-allowed"
-            placeholder="Ticket Number (generated on save)"
-          />
+          {/* Ticket Number */}
+          <div className="flex flex-col">
+            <label className="font-semibold mb-1">Ticket Number</label>
+            <input
+              type="text"
+              name="ticketNumber"
+              value={form.ticketNumber}
+              readOnly
+              className="input-field border-blue-300 bg-gray-100 cursor-not-allowed"
+              placeholder="Ticket Number (generated on save)"
+            />
+          </div>
 
-          {[
-            { name: "clientName", placeholder: "Client Name" },
-            { name: "location", placeholder: "Location" },
-            {
-              name: "category",
-              placeholder: "Category",
-              type: "select",
-              options: [
-                "Issue",
-                "Understanding",
-                "Requirement",
-                "Client's Scope",
-                "Development",
-              ],
-            },
-            { name: "raisedBy", placeholder: "Raised By" },
-            { name: "assignedTo", placeholder: "Assigned To" },
-            { name: "description", placeholder: "Description" },
-            {
-              name: "status",
-              placeholder: "Status",
-              type: "select",
-              options: ["Open", "Closed", "Hold"],
-            },
-            {
-              name: "priority",
-              placeholder: "Priority",
-              type: "select",
-              options: ["Low", "Medium", "High"],
-            },
-            { name: "resolution", placeholder: "Resolution" },
-            { name: "dateClosed", placeholder: "Date Closed", type: "date" },
-            { name: "timeClosed", placeholder: "Time Closed", type: "time" },
-          ].map((field) =>
-            field.type === "select" ? (
-              <select
-                key={field.name}
-                name={field.name}
-                value={form[field.name as keyof Ticket] as string}
-                onChange={handleChange}
-                className="input-field border-blue-300"
-              >
-                {field.options!.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
+          {/* Client */}
+          <div className="flex flex-col">
+            <label className="font-semibold mb-1">Client Name</label>
+            <select
+              name="clientName"
+              value={form.clientName}
+              onChange={handleChange}
+              className="input-field border-blue-300"
+            >
+              <option value="">Select Client</option>
+              {clients.map((c) => (
+                <option key={c.name} value={c.name}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Location */}
+          <div className="flex flex-col">
+            <label className="font-semibold mb-1">Location</label>
+            <input
+              type="text"
+              name="location"
+              value={form.location}
+              readOnly
+              placeholder="Location"
+              className="input-field border-blue-300 bg-gray-100 cursor-not-allowed"
+            />
+          </div>
+
+          {/* Category */}
+          <div className="flex flex-col">
+            <label className="font-semibold mb-1">Category</label>
+            <select
+              name="category"
+              value={form.category}
+              onChange={handleChange}
+              className="input-field border-blue-300"
+            >
+              {["Issue", "Understanding", "Requirement", "Client's Scope", "Development"].map(
+                (option) => (
+                  <option key={option} value={option}>
+                    {option}
                   </option>
-                ))}
-              </select>
-            ) : (
-              <input
-                key={field.name}
-                type={field.type || "text"}
-                name={field.name}
-                value={form[field.name as keyof Ticket] as string}
-                onChange={handleChange}
-                placeholder={field.placeholder}
-                className="input-field border-blue-300"
-              />
-            )
-          )}
+                )
+              )}
+            </select>
+          </div>
 
-          <input
-            type="text"
-            name="dateRaised"
-            value={form.dateRaised || new Date().toISOString().split("T")[0]}
-            readOnly
-            className="input-field border-blue-300 bg-gray-100 cursor-not-allowed"
-            placeholder="Date Raised"
-          />
-          <input
-            type="text"
-            name="timeRaised"
-            value={form.timeRaised || new Date().toTimeString().slice(0, 5)}
-            readOnly
-            className="input-field border-blue-300 bg-gray-100 cursor-not-allowed"
-            placeholder="Time Raised"
-          />
-          <input
-            type="text"
-            name="totalDaysElapsed"
-            value={form.totalDaysElapsed}
-            readOnly
-            className="input-field border-blue-300 bg-gray-100 cursor-not-allowed"
-            placeholder="Total Days Elapsed"
-          />
+          {/* Raised By */}
+          <div className="flex flex-col">
+            <label className="font-semibold mb-1">Raised By</label>
+            <input
+              type="text"
+              name="raisedBy"
+              value={form.raisedBy}
+              onChange={handleChange}
+              placeholder="Raised By"
+              className="input-field border-blue-300"
+            />
+          </div>
+
+          {/* Assigned To */}
+          <div className="flex flex-col">
+            <label className="font-semibold mb-1">Assigned To</label>
+            <input
+              type="text"
+              name="assignedTo"
+              value={form.assignedTo}
+              onChange={handleChange}
+              placeholder="Assigned To"
+              className="input-field border-blue-300"
+            />
+          </div>
+
+          {/* Description */}
+          <div className="flex flex-col">
+            <label className="font-semibold mb-1">Description</label>
+            <input
+              type="text"
+              name="description"
+              value={form.description}
+              onChange={handleChange}
+              placeholder="Description"
+              className="input-field border-blue-300"
+            />
+          </div>
+
+          {/* Status */}
+          <div className="flex flex-col">
+            <label className="font-semibold mb-1">Status</label>
+            <select
+              name="status"
+              value={form.status}
+              onChange={handleChange}
+              className={`input-field border-blue-300 
+                ${form.status === "Closed" ? "bg-green-600" : ""} 
+                ${form.status === "Open" ? "bg-red-400" : ""} 
+                ${form.status === "Hold" ? "bg-yellow-400" : ""}`}
+            >
+              {["Open", "Closed", "Hold"].map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Priority */}
+          <div className="flex flex-col">
+            <label className="font-semibold mb-1">Priority</label>
+            <select
+              name="priority"
+              value={form.priority}
+              onChange={handleChange}
+              className={`input-field border-blue-300 
+                ${form.priority === "High" ? "bg-red-400" : ""} 
+                ${form.priority === "Medium" ? "bg-orange-400" : ""} 
+                ${form.priority === "Low" ? "bg-yellow-400" : ""}`}
+            >
+              {["Low", "Medium", "High"].map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Resolution */}
+          <div className="flex flex-col">
+            <label className="font-semibold mb-1">Resolution</label>
+            <input
+              type="text"
+              name="resolution"
+              value={form.resolution}
+              onChange={handleChange}
+              placeholder="Resolution"
+              className="input-field border-blue-300"
+            />
+          </div>
+
+          {/* Date Closed */}
+          <div className="flex flex-col">
+            <label className="font-semibold mb-1">Date Closed</label>
+            <input
+              type="date"
+              name="dateClosed"
+              value={form.dateClosed}
+              onChange={handleChange}
+              className="input-field border-blue-300"
+            />
+          </div>
+
+          {/* Time Closed */}
+          <div className="flex flex-col">
+            <label className="font-semibold mb-1">Time Closed</label>
+            <input
+              type="time"
+              name="timeClosed"
+              value={form.timeClosed}
+              onChange={handleChange}
+              className="input-field border-blue-300"
+            />
+          </div>
+
+          {/* Date Raised */}
+          <div className="flex flex-col">
+            <label className="font-semibold mb-1">Date Raised</label>
+            <input
+              type="text"
+              name="dateRaised"
+              value={form.dateRaised || new Date().toISOString().split("T")[0]}
+              readOnly
+              className="input-field border-blue-300 bg-gray-100 cursor-not-allowed"
+            />
+          </div>
+
+          {/* Time Raised */}
+          <div className="flex flex-col">
+            <label className="font-semibold mb-1">Time Raised</label>
+            <input
+              type="text"
+              name="timeRaised"
+              value={form.timeRaised || new Date().toTimeString().slice(0, 5)}
+              readOnly
+              className="input-field border-blue-300 bg-gray-100 cursor-not-allowed"
+            />
+          </div>
+
+          {/* Total Days Elapsed */}
+          <div className="flex flex-col">
+            <label className="font-semibold mb-1">Total Days Elapsed</label>
+            <input
+              type="text"
+              name="totalDaysElapsed"
+              value={form.totalDaysElapsed}
+              readOnly
+              className="input-field border-blue-300 bg-gray-100 cursor-not-allowed"
+            />
+          </div>
         </CardContent>
 
         <CardContent>
@@ -405,8 +575,8 @@ export function TicketingSystem() {
                   <td className="p-2">{ticket.assignedTo}</td>
                   <td className="p-2">{ticket.description}</td>
                   <td className="p-2">{ticket.totalDaysElapsed}</td>
-                  <td className="p-2">{ticket.status}</td>
-                  <td className="p-2">{ticket.priority}</td>
+                  <td className={`p-2 ${getStatusColor(ticket.status)}`}>{ticket.status}</td>
+                  <td className={`p-2 ${getPriorityColor(ticket.priority)}`}>{ticket.priority}</td>
                   <td className="p-2">{ticket.resolution}</td>
                   <td className="p-2">{ticket.dateClosed}</td>
                   <td className="p-2">{ticket.timeClosed}</td>
