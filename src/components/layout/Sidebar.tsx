@@ -18,12 +18,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
 const navigationItems = [
-  /*{
+  {
     title: 'Dashboard',
     href: '/',
     icon: LayoutDashboard,
     badge: null,
-  },*/
+  },
   {
     title: 'Projects',
     href: '/projects',
