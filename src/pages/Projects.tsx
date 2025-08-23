@@ -28,17 +28,38 @@ type Status = "active" | "planning" | "completed" | "on_hold";
 
 interface Project {
   _id: string;
-  name: string;          // Project
-  client: string;        // Client
-  milestone: string;     // Milestone
-  planStart: string;     // Plan Start (ISO string)
-  planClose: string;     // Plan Close (ISO string)
-  actualStart?: string;   // Actual Start (ISO string) optional
-  actualClose?: string;   // Actual Close (ISO string) optional
-  status: Status;        // Status
-  bottleneck?: string;    // Bottleneck optional
-  remark?: string;        // Remark optional
-  progress: number;       // Progress 0-100
+  name: string;
+  client: string;
+  milestone: string;
+  planStart: string;
+  planClose: string;
+  actualStart?: string;
+  actualClose?: string;
+  status: Status;
+  bottleneck?: string;
+  remark?: string;
+  progress: number;
+}
+
+interface Client {
+  id: string;
+  clientName: string;
+  clientLocation: string;
+  gst: string;
+  email: string;
+  spoc: string;
+}
+
+interface Milestone {
+  _id: string;
+  name: string;
+}
+
+interface MasterProject {
+  _id: string;
+  projectName: string;
+  projectCode: string;
+  description: string;
 }
 
 const statusColors = {
@@ -50,6 +71,9 @@ const statusColors = {
 
 export function Projects() {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
+  const [masterProjects, setMasterProjects] = useState<MasterProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -67,6 +91,7 @@ export function Projects() {
     progress: 0,
   });
 
+  // Fetch projects, clients, milestones, master projects
   const fetchProjects = async () => {
     setLoading(true);
     try {
@@ -79,21 +104,45 @@ export function Projects() {
     }
   };
 
+  const fetchClients = async () => {
+    try {
+      const res = await api.get("/api/clients");
+      setClients(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchMilestones = async () => {
+    try {
+      const res = await api.get("/api/milestones");
+      setMilestones(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchMasterProjects = async () => {
+    try {
+      const res = await api.get("/api/masterprojects");
+      setMasterProjects(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     fetchProjects();
+    fetchClients();
+    fetchMilestones();
+    fetchMasterProjects();
   }, []);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-
     if (name === "progress") {
       const num = Number(value);
-      setFormData((s) => ({
-        ...s,
-        progress: isNaN(num) ? 0 : Math.min(100, Math.max(0, num)),
-      }));
+      setFormData((s) => ({ ...s, progress: isNaN(num) ? 0 : Math.min(100, Math.max(0, num)) }));
     } else if (name === "status") {
       setFormData((s) => ({ ...s, status: value as Status }));
     } else {
@@ -118,20 +167,10 @@ export function Projects() {
 
   const handleSubmit = async () => {
     try {
-      if (
-        !formData.name ||
-        !formData.client ||
-        !formData.milestone ||
-        !formData.planStart ||
-        !formData.planClose
-      ) {
-        alert(
-          "Please fill in required fields: Project, Client, Milestone, Plan Start, Plan Close."
-        );
+      if (!formData.name || !formData.client || !formData.milestone || !formData.planStart || !formData.planClose) {
+        alert("Please fill in required fields: Project, Client, Milestone, Plan Start, Plan Close.");
         return;
       }
-
-      // Sending formData as-is; actualStart, actualClose, bottleneck, remark can be empty strings
       if (editingId) {
         await api.put(`/api/projects/${editingId}`, formData);
       } else {
@@ -149,11 +188,14 @@ export function Projects() {
 
   const handleView = (project: Project) => {
     const fmt = (d?: string) => (d ? new Date(d).toLocaleDateString() : "-");
+    const clientName = clients.find((c) => c.clientName === project.client)?.clientName || project.client;
+    const milestoneName = milestones.find((m) => m._id === project.milestone)?.name || project.milestone;
+
     alert(
       [
         `Project: ${project.name}`,
-        `Client: ${project.client}`,
-        `Milestone: ${project.milestone}`,
+        `Client: ${clientName}`,
+        `Milestone: ${milestoneName}`,
         `Plan Start: ${fmt(project.planStart)}`,
         `Plan Close: ${fmt(project.planClose)}`,
         `Actual Start: ${fmt(project.actualStart)}`,
@@ -167,9 +209,7 @@ export function Projects() {
   };
 
   const handleEdit = (project: Project) => {
-    const toDateInput = (iso?: string) =>
-      iso ? new Date(iso).toISOString().split("T")[0] : "";
-
+    const toDateInput = (iso?: string) => (iso ? new Date(iso).toISOString().split("T")[0] : "");
     setFormData({
       name: project.name,
       client: project.client,
@@ -214,34 +254,30 @@ export function Projects() {
 
   const columns: ColumnDef<Project>[] = [
     { accessorKey: "name", header: "Project" },
-    { accessorKey: "client", header: "Client" },
-    { accessorKey: "milestone", header: "Milestone" },
     {
-      accessorKey: "planStart",
-      header: "Plan Start",
-      cell: ({ row }) => fmtDateCell(row.getValue("planStart")),
+      accessorKey: "client",
+      header: "Client",
+      cell: ({ row }) => row.getValue("client"),
     },
     {
-      accessorKey: "planClose",
-      header: "Plan Close",
-      cell: ({ row }) => fmtDateCell(row.getValue("planClose")),
+      accessorKey: "milestone",
+      header: "Milestone",
+      cell: ({ row }) => milestones.find((m) => m._id === row.getValue("milestone"))?.name || row.getValue("milestone"),
     },
-    {
-      accessorKey: "actualStart",
-      header: "Actual Start",
-      cell: ({ row }) => fmtDateCell(row.getValue("actualStart")),
-    },
-    {
-      accessorKey: "actualClose",
-      header: "Actual Close",
-      cell: ({ row }) => fmtDateCell(row.getValue("actualClose")),
-    },
+    { accessorKey: "planStart", header: "Plan Start", cell: ({ row }) => fmtDateCell(row.getValue("planStart")) },
+    { accessorKey: "planClose", header: "Plan Close", cell: ({ row }) => fmtDateCell(row.getValue("planClose")) },
+    { accessorKey: "actualStart", header: "Actual Start", cell: ({ row }) => fmtDateCell(row.getValue("actualStart")) },
+    { accessorKey: "actualClose", header: "Actual Close", cell: ({ row }) => fmtDateCell(row.getValue("actualClose")) },
     {
       accessorKey: "status",
       header: "Status",
       cell: ({ row }) => {
-        const status = row.getValue("status") as Status;
-        return <Badge variant={statusColors[status]}>{status.replace("_", " ")}</Badge>;
+        const status = row.getValue("status") as string;
+        return (
+          <Badge variant={statusColors[status as Status]}>
+            {status.replace("_", " ")}
+          </Badge>
+        );
       },
     },
     { accessorKey: "bottleneck", header: "Bottleneck" },
@@ -249,15 +285,12 @@ export function Projects() {
     {
       accessorKey: "progress",
       header: "Progress",
-      cell: ({ row }) => {
-        const val = Number(row.getValue("progress") ?? 0);
-        return (
-          <div className="space-y-1">
-            <span>{val}%</span>
-            <Progress value={val} className="w-24" />
-          </div>
-        );
-      },
+      cell: ({ row }) => (
+        <div className="space-y-1">
+          <span>{row.getValue("progress")}%</span>
+          <Progress value={Number(row.getValue("progress"))} className="w-24" />
+        </div>
+      ),
     },
     {
       id: "actions",
@@ -265,7 +298,7 @@ export function Projects() {
       cell: ({ row }) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0" aria-label="Open row actions">
+            <Button variant="ghost" className="h-8 w-8 p-0">
               <MoreHorizontal />
             </Button>
           </DropdownMenuTrigger>
@@ -298,23 +331,50 @@ export function Projects() {
         </Button>
       </motion.div>
 
-      {/* Stats */}
+      {/* Colorful Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {[
-          { key: "total", label: "Total" },
-          { key: "active", label: "Active" },
-          { key: "planning", label: "Planning" },
-          { key: "completed", label: "Completed" },
-        ].map(({ key, label }) => (
-          <Card key={key}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{stats[key as keyof typeof stats]}</p>
-            </CardContent>
-          </Card>
-        ))}
+        {["total", "active", "planning", "completed"].map((key) => {
+          let bgColor = "";
+          let progressColor = "";
+          switch (key) {
+            case "total":
+              bgColor = "bg-blue-100 text-blue-800";
+              progressColor = "bg-blue-600";
+              break;
+            case "active":
+              bgColor = "bg-green-100 text-green-800";
+              progressColor = "bg-green-600";
+              break;
+            case "planning":
+              bgColor = "bg-yellow-100 text-yellow-800";
+              progressColor = "bg-yellow-600";
+              break;
+            case "completed":
+              bgColor = "bg-purple-100 text-purple-800";
+              progressColor = "bg-purple-600";
+              break;
+            default:
+              bgColor = "bg-gray-100 text-gray-800";
+              progressColor = "bg-gray-600";
+          }
+          const value = stats[key as keyof typeof stats];
+          const total = stats.total || 1;
+          const percentage = Math.min(100, Math.round((value / total) * 100));
+
+          return (
+            <Card key={key} className={`${bgColor} shadow-md`}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">{key.charAt(0).toUpperCase() + key.slice(1)}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <p className="text-2xl font-bold">{value}</p>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className={`h-2 rounded-full ${progressColor}`} style={{ width: `${percentage}%` }}></div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Projects Table */}
@@ -325,7 +385,7 @@ export function Projects() {
         <CardContent>{loading ? <p>Loading...</p> : <DataTable columns={columns} data={projects} />}</CardContent>
       </Card>
 
-      {/* Project Create/Edit Dialog */}
+      {/* Create/Edit Dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
@@ -333,17 +393,52 @@ export function Projects() {
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
-            {/* Project, Client, Milestone */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {["name", "client", "milestone"].map((field) => (
-                <div key={field} className="grid gap-2">
-                  <Label htmlFor={field}>{field.charAt(0).toUpperCase() + field.slice(1)}</Label>
-                  <Input id={field} name={field} value={(formData as any)[field] ?? ""} onChange={handleChange} />
-                </div>
-              ))}
+            {/* Project Dropdown */}
+            <div className="grid gap-2">
+              <Label htmlFor="projectName">Project</Label>
+              <select
+                id="projectName"
+                name="projectName"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="">Select Project</option>
+                {masterProjects.map((p) => (
+                  <option key={p._id} value={p.projectName}>{p.projectName}</option>
+                ))}
+              </select>
             </div>
 
-            {/* Plan Start, Plan Close */}
+            {/* Client Dropdown */}
+            <div className="grid gap-2">
+              <Label htmlFor="client">Client</Label>
+              <select
+                id="client"
+                name="client"
+                value={formData.client}
+                onChange={handleChange}
+                className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="">Select Client</option>
+                {clients.map((c) => (
+                  <option key={c.id} value={c.clientName}>{c.clientName}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Milestone Dropdown */}
+            <div className="grid gap-2">
+              <Label htmlFor="milestone">Milestone</Label>
+              <select id="milestone" name="milestone" value={formData.milestone} onChange={handleChange} className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm">
+                <option value="">Select Milestone</option>
+                {milestones.map((m) => (
+                  <option key={m._id} value={m._id}>{m.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Dates, Status, Progress, Bottleneck, Remark */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="planStart">Plan Start</Label>
@@ -353,10 +448,6 @@ export function Projects() {
                 <Label htmlFor="planClose">Plan Close</Label>
                 <Input id="planClose" type="date" name="planClose" value={formData.planClose} onChange={handleChange} />
               </div>
-            </div>
-
-            {/* Actual Start, Actual Close (optional) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="actualStart">Actual Start</Label>
                 <Input id="actualStart" type="date" name="actualStart" value={formData.actualStart} onChange={handleChange} />
@@ -365,10 +456,6 @@ export function Projects() {
                 <Label htmlFor="actualClose">Actual Close</Label>
                 <Input id="actualClose" type="date" name="actualClose" value={formData.actualClose} onChange={handleChange} />
               </div>
-            </div>
-
-            {/* Status, Progress */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="status">Status</Label>
                 <select id="status" name="status" value={formData.status} onChange={handleChange} className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm">
@@ -382,10 +469,6 @@ export function Projects() {
                 <Label htmlFor="progress">Progress (%)</Label>
                 <Input id="progress" type="number" min={0} max={100} name="progress" value={formData.progress} onChange={handleChange} />
               </div>
-            </div>
-
-            {/* Bottleneck and Remark (optional) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="bottleneck">Bottleneck</Label>
                 <Input id="bottleneck" name="bottleneck" value={formData.bottleneck} onChange={handleChange} />
