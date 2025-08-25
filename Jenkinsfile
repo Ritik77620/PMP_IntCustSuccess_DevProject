@@ -2,22 +2,18 @@ pipeline {
     agent any
 
     stages {
-        stage('Build') {
-            agent {
-                docker {
-                    image 'node:18-alpine'
-                    reuseNode true
-                }
-            }
+        stage('Build with Docker') {
             steps {
-                sh '''
-                    ls -l
-                    node --version
-                    npm --version
-                    npm install
-                    npm run build
-                    ls -l
-                '''
+                script {
+                    docker.image('node:18-alpine').inside {
+                        sh '''
+                            node --version
+                            npm --version
+                            npm install
+                            npm run build
+                        '''
+                    }
+                }
             }
         }
     }
