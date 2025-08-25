@@ -30,6 +30,8 @@ interface Client {
   location: string;
 }
 
+
+
 export function TicketingSystem() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -204,7 +206,8 @@ export function TicketingSystem() {
     setForm(tickets[index]);
   };
 
-  const handleDelete = async (index: number) => {
+  const handleDelete = async (
+    index: number) => {
     try {
       const ticketToDelete = tickets[index];
       if (!confirm("Are you sure you want to delete this ticket?")) return;
@@ -244,17 +247,34 @@ export function TicketingSystem() {
   };
 
   const exportToExcel = () => {
-    const worksheet = XLSX.utils.json_to_sheet(tickets);
+    // Map tickets with custom headers
+    const exportData = tickets.map((t) => ({
+      "Ticket Number": t.ticketNumber,
+      "Client Name": t.clientName,
+      "Location": t.location,
+      "Date Raised": t.dateRaised,
+      "Time Raised": t.timeRaised,
+      "Category": t.category,
+      "Raised By": t.raisedBy,
+      "Assigned To": t.assignedTo,
+      "Description": t.description,
+      "Total Days Elapsed": t.totalDaysElapsed,
+      "Status": t.status,
+      "Priority": t.priority,
+      "Resolution": t.resolution,
+      "Date Closed": t.dateClosed,
+      "Time Closed": t.timeClosed,
+    }));
+
+    // Create worksheet & workbook
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Tickets");
-    const excelBuffer = XLSX.write(workbook, {
-      bookType: "xlsx",
-      type: "array",
-    });
-    const data = new Blob([excelBuffer], {
-      type: "application/octet-stream",
-    });
-    saveAs(data, "tickets.xlsx");
+
+    // Export
+    const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+    const data = new Blob([excelBuffer], { type: "application/octet-stream" });
+    saveAs(data, "TicketsTacker.xlsx");
   };
 
   const getStatusColor = (status: string) => {
