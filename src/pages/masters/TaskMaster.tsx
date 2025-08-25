@@ -1,111 +1,105 @@
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface Task {
   id: string;
-  ticketNumber: string;
-  clientName: string;
-  location: string;
-  dateRaised: string;
-  timeRaised: string;
-  category: string;
-  raisedBy: string;
+  raisedDate: string;
   assignedTo: string;
-  description: string;
-  totalDaysElapsed: string;
+  type: string;
+  client: string;
+  issue: string;
+  produceStep: string;
+  sampleData: string;
+  acceptanceCriteria: string;
   status: string;
-  priority: string;
-  resolution: string;
-  dateClosed: string;
-  timeClosed: string;
+  expectedClosureDate: string;
+  actualClosureDate: string;
+  testingStatus: string;
+  testingDoneBy: string;
 }
 
 export function TaskMaster() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [form, setForm] = useState<Task>({
-    id: '',
-    ticketNumber: '',
-    clientName: '',
-    location: '',
-    dateRaised: '',
-    timeRaised: '',
-    category: '',
-    raisedBy: '',
-    assignedTo: '',
-    description: '',
-    totalDaysElapsed: '',
-    status: '',
-    priority: '',
-    resolution: '',
-    dateClosed: '',
-    timeClosed: '',
+    id: "",
+    raisedDate: "",
+    assignedTo: "",
+    type: "",
+    client: "",
+    issue: "",
+    produceStep: "",
+    sampleData: "",
+    acceptanceCriteria: "",
+    status: "",
+    expectedClosureDate: "",
+    actualClosureDate: "",
+    testingStatus: "",
+    testingDoneBy: "",
   });
 
   const [showForm, setShowForm] = useState(false);
 
   // Load from localStorage
   useEffect(() => {
-    const stored = localStorage.getItem('tasks');
+    const stored = localStorage.getItem("tasks");
     if (stored) setTasks(JSON.parse(stored));
   }, []);
 
   // Save to localStorage
   useEffect(() => {
-    localStorage.setItem('tasks', JSON.stringify(tasks));
+    localStorage.setItem("tasks", JSON.stringify(tasks));
   }, [tasks]);
 
-  // Helper to generate ticket number
-  const generateTicketNumber = () => {
-    const now = new Date();
-    const dd = String(now.getDate()).padStart(2, '0');
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
-    const yyyy = now.getFullYear();
-    const hh = String(now.getHours()).padStart(2, '0');
-    const min = String(now.getMinutes()).padStart(2, '0');
-    return `${dd}${mm}${yyyy}${hh}${min}`;
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
   const handleSave = () => {
-    if (!form.clientName || !form.description) return;
+    if (!form.client || !form.issue) return;
 
     if (form.id) {
       setTasks(tasks.map((t) => (t.id === form.id ? form : t)));
     } else {
-      const now = new Date();
       const newTask: Task = {
         ...form,
         id: Date.now().toString(),
-        ticketNumber: generateTicketNumber(),
-        dateRaised: now.toLocaleDateString(),
-        timeRaised: now.toLocaleTimeString(),
+        raisedDate: new Date().toLocaleDateString(),
       };
       setTasks([...tasks, newTask]);
     }
 
     setForm({
-      id: '',
-      ticketNumber: '',
-      clientName: '',
-      location: '',
-      dateRaised: '',
-      timeRaised: '',
-      category: '',
-      raisedBy: '',
-      assignedTo: '',
-      description: '',
-      totalDaysElapsed: '',
-      status: '',
-      priority: '',
-      resolution: '',
-      dateClosed: '',
-      timeClosed: '',
+      id: "",
+      raisedDate: "",
+      assignedTo: "",
+      type: "",
+      client: "",
+      issue: "",
+      produceStep: "",
+      sampleData: "",
+      acceptanceCriteria: "",
+      status: "",
+      expectedClosureDate: "",
+      actualClosureDate: "",
+      testingStatus: "",
+      testingDoneBy: "",
     });
     setShowForm(false);
   };
@@ -124,105 +118,165 @@ export function TaskMaster() {
 
   return (
     <div className="space-y-6 p-4">
-      <h1 className="text-2xl font-bold">Task Master</h1>
+      <h1 className="text-2xl font-bold">Issue & Requirement Tracker</h1>
 
-      <Button onClick={() => setShowForm(true)}>+ Add New Ticket</Button>
+      <Button onClick={() => setShowForm(true)}>+ Add New Entry</Button>
 
       {/* Form */}
       {showForm && (
         <Card>
           <CardHeader>
-            <CardTitle>{form.id ? 'Edit Task' : 'Add New Task'}</CardTitle>
+            <CardTitle>{form.id ? "Edit Entry" : "Add New Entry"}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Input name="clientName" placeholder="Client Name" value={form.clientName} onChange={handleChange} />
-            <Input name="location" placeholder="Location" value={form.location} onChange={handleChange} />
+            <Input
+              name="assignedTo"
+              placeholder="Assigned To"
+              value={form.assignedTo}
+              onChange={handleChange}
+            />
             <select
-              name="category"
-              value={form.category}
+              name="type"
+              value={form.type}
               onChange={handleChange}
               className="w-full border rounded p-2"
             >
-              <option value="">Select Category</option>
+              <option value="">Select Type</option>
               <option value="Issue">Issue</option>
               <option value="Requirement">Requirement</option>
-              <option value="Development">Development</option>
-              <option value="Understanding">Understanding</option>
             </select>
-            <Input name="raisedBy" placeholder="Raised By" value={form.raisedBy} onChange={handleChange} />
-            <Input name="assignedTo" placeholder="Assigned To" value={form.assignedTo} onChange={handleChange} />
-            <Input name="description" placeholder="Description" value={form.description} onChange={handleChange} />
-            <select name="status" value={form.status} onChange={handleChange} className="w-full border rounded p-2">
+            <Input
+              name="client"
+              placeholder="Client"
+              value={form.client}
+              onChange={handleChange}
+            />
+            <Input
+              name="issue"
+              placeholder="Issue / Requirement"
+              value={form.issue}
+              onChange={handleChange}
+            />
+            <Input
+              name="produceStep"
+              placeholder="Produce Step"
+              value={form.produceStep}
+              onChange={handleChange}
+            />
+            <Input
+              name="sampleData"
+              placeholder="Sample Data"
+              value={form.sampleData}
+              onChange={handleChange}
+            />
+            <Input
+              name="acceptanceCriteria"
+              placeholder="Acceptance Criteria"
+              value={form.acceptanceCriteria}
+              onChange={handleChange}
+            />
+            <select
+              name="status"
+              value={form.status}
+              onChange={handleChange}
+              className="w-full border rounded p-2"
+            >
               <option value="">Select Status</option>
               <option value="Open">Open</option>
               <option value="In Progress">In Progress</option>
               <option value="Closed">Closed</option>
-              <option value="On Hold">On Hold</option>
             </select>
-            <select name="priority" value={form.priority} onChange={handleChange} className="w-full border rounded p-2">
-              <option value="">Select Priority</option>
-              <option value="Low">Low</option>
-              <option value="Medium">Medium</option>
-              <option value="High">High</option>
-              <option value="Critical">Critical</option>
-            </select>
-            <Input name="resolution" placeholder="Resolution" value={form.resolution} onChange={handleChange} />
-            <Input name="dateClosed" placeholder="Date Closed" value={form.dateClosed} onChange={handleChange} />
-            <Input name="timeClosed" placeholder="Time Closed" value={form.timeClosed} onChange={handleChange} />
+            <Input
+              type="date"
+              name="expectedClosureDate"
+              value={form.expectedClosureDate}
+              onChange={handleChange}
+            />
+            <Input
+              type="date"
+              name="actualClosureDate"
+              value={form.actualClosureDate}
+              onChange={handleChange}
+            />
+            <Input
+              name="testingStatus"
+              placeholder="Testing Status"
+              value={form.testingStatus}
+              onChange={handleChange}
+            />
+            <Input
+              name="testingDoneBy"
+              placeholder="Testing Done By"
+              value={form.testingDoneBy}
+              onChange={handleChange}
+            />
             <div className="flex space-x-2">
               <Button onClick={handleSave}>Save</Button>
-              <Button variant="secondary" onClick={() => setShowForm(false)}>Cancel</Button>
+              <Button
+                variant="secondary"
+                onClick={() => setShowForm(false)}
+              >
+                Cancel
+              </Button>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Tasks Table */}
+      {/* Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Tasks List</CardTitle>
+          <CardTitle>Entries List</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Ticket No</TableHead>
-                <TableHead>Client</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Raised By</TableHead>
+                <TableHead>Sr. No</TableHead>
+                <TableHead>Raised Date</TableHead>
                 <TableHead>Assigned To</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Client</TableHead>
+                <TableHead>Issue/Requirement</TableHead>
+                <TableHead>Produce Step</TableHead>
+                <TableHead>Sample Data</TableHead>
+                <TableHead>Acceptance Criteria</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Priority</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Resolution</TableHead>
-                <TableHead>Date Raised</TableHead>
-                <TableHead>Time Raised</TableHead>
-                <TableHead>Date Closed</TableHead>
-                <TableHead>Time Closed</TableHead>
+                <TableHead>Expected Closure</TableHead>
+                <TableHead>Actual Closure</TableHead>
+                <TableHead>Testing Status</TableHead>
+                <TableHead>Testing Done By</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {tasks.map((t) => (
+              {tasks.map((t, index) => (
                 <TableRow key={t.id}>
-                  <TableCell>{t.ticketNumber}</TableCell>
-                  <TableCell>{t.clientName}</TableCell>
-                  <TableCell>{t.location}</TableCell>
-                  <TableCell>{t.category}</TableCell>
-                  <TableCell>{t.raisedBy}</TableCell>
+                  <TableCell>{index + 1}</TableCell>
+                  <TableCell>{t.raisedDate}</TableCell>
                   <TableCell>{t.assignedTo}</TableCell>
+                  <TableCell>{t.type}</TableCell>
+                  <TableCell>{t.client}</TableCell>
+                  <TableCell>{t.issue}</TableCell>
+                  <TableCell>{t.produceStep}</TableCell>
+                  <TableCell>{t.sampleData}</TableCell>
+                  <TableCell>{t.acceptanceCriteria}</TableCell>
                   <TableCell>{t.status}</TableCell>
-                  <TableCell>{t.priority}</TableCell>
-                  <TableCell>{t.description}</TableCell>
-                  <TableCell>{t.resolution}</TableCell>
-                  <TableCell>{t.dateRaised}</TableCell>
-                  <TableCell>{t.timeRaised}</TableCell>
-                  <TableCell>{t.dateClosed}</TableCell>
-                  <TableCell>{t.timeClosed}</TableCell>
+                  <TableCell>{t.expectedClosureDate}</TableCell>
+                  <TableCell>{t.actualClosureDate}</TableCell>
+                  <TableCell>{t.testingStatus}</TableCell>
+                  <TableCell>{t.testingDoneBy}</TableCell>
                   <TableCell className="space-x-2">
-                    <Button size="sm" onClick={() => handleEdit(t.id)}>Edit</Button>
-                    <Button size="sm" variant="destructive" onClick={() => handleDelete(t.id)}>Delete</Button>
+                    <Button size="sm" onClick={() => handleEdit(t.id)}>
+                      Edit
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => handleDelete(t.id)}
+                    >
+                      Delete
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
