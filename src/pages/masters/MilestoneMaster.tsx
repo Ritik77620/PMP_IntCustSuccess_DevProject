@@ -31,7 +31,7 @@ export default function MilestoneMaster() {
   // Fetch milestones from backend API
   const fetchMilestones = async () => {
     try {
-      const res = await fetch("http://localhost:5001/api/milestones");
+      const res = await fetch("http://localhost:7001/api/milestones");
       if (!res.ok) throw new Error("Failed to fetch milestones");
       const data = await res.json();
       setMilestones(data);
@@ -43,7 +43,7 @@ export default function MilestoneMaster() {
   // Fetch sub-milestones from backend API
   const fetchSubMilestones = async () => {
     try {
-      const res = await fetch("http://localhost:5001/api/submilestones");
+      const res = await fetch("http://localhost:7001/api/submilestones");
       if (!res.ok) throw new Error("Failed to fetch submilestones");
       const data = await res.json();
       setSubMilestones(data);
@@ -59,8 +59,8 @@ export default function MilestoneMaster() {
     try {
       const method = mileForm.id ? "PUT" : "POST";
       const url = mileForm.id
-        ? `http://localhost:5001/api/milestones/${mileForm.id}`
-        : "http://localhost:5001/api/milestones";
+        ? `http://localhost:7001/api/milestones/${mileForm.id}`
+        : "http://localhost:7001/api/milestones";
 
       const res = await fetch(url, {
         method,
@@ -85,8 +85,8 @@ export default function MilestoneMaster() {
     try {
       const method = subForm.id ? "PUT" : "POST";
       const url = subForm.id
-        ? `http://localhost:5001/api/submilestones/${subForm.id}`
-        : "http://localhost:5001/api/submilestones";
+        ? `http://localhost:7001/api/submilestones/${subForm.id}`
+        : "http://localhost:7001/api/submilestones";
 
       const res = await fetch(url, {
         method,
@@ -112,7 +112,7 @@ export default function MilestoneMaster() {
   const handleMileDelete = async (id: string) => {
     if (!confirm("Delete this milestone?")) return;
     try {
-      const res = await fetch(`http://localhost:5001/api/milestones/${id}`, { method: "DELETE" });
+      const res = await fetch(`http://localhost:7001/api/milestones/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Delete failed");
       fetchMilestones();
     } catch (err: any) {
@@ -124,7 +124,7 @@ export default function MilestoneMaster() {
   const handleSubDelete = async (id: string) => {
     if (!confirm("Delete this sub-milestone?")) return;
     try {
-      const res = await fetch(`http://localhost:5001/api/submilestones/${id}`, { method: "DELETE" });
+      const res = await fetch(`http://localhost:7001/api/submilestones/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Delete failed");
       fetchSubMilestones();
     } catch (err: any) {

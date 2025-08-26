@@ -23,7 +23,7 @@ export function ProjectMaster() {
 
   // Fetch projects from backend
   useEffect(() => {
-    fetch('http://localhost:5001/api/masterprojects')
+    fetch('http://localhost:7001/api/masterprojects')
       .then((res) => res.json())
       .then((data) => setProjects(data))
       .catch((err) => console.error('Error fetching projects:', err));
@@ -38,7 +38,7 @@ export function ProjectMaster() {
 
     if (form._id) {
       // Update project
-      const res = await fetch(`http://localhost:5001/api/masterprojects/${form._id}`, {
+      const res = await fetch(`http://localhost:7001/api/masterprojects/${form._id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
@@ -47,7 +47,7 @@ export function ProjectMaster() {
       setProjects(projects.map((p) => (p._id === updated._id ? updated : p)));
     } else {
       // Create project
-      const res = await fetch('http://localhost:5001/api/masterprojects', {
+      const res = await fetch('http://localhost:7001/api/masterprojects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
@@ -69,7 +69,7 @@ export function ProjectMaster() {
   };
 
   const handleDelete = async (id: string) => {
-    await fetch(`http://localhost:5001/api/masterprojects/${id}`, {
+    await fetch(`http://localhost:7001/api/masterprojects/${id}`, {
       method: 'DELETE',
     });
     setProjects(projects.filter((p) => p._id !== id));
