@@ -26,8 +26,15 @@ import { Label } from "@/components/ui/label";
 
 type Status = "Running" | "Completed" | "Delayed";
 
+interface Milestone {
+  _id: string;
+  name: string;
+  sequence: number;
+}
+
 interface Project {
   _id: string;
+  projectCode: string;
   name: string;
   client: string;
   milestone: string;
@@ -50,11 +57,6 @@ interface Client {
   spoc: string;
 }
 
-interface Milestone {
-  _id: string;
-  name: string;
-}
-
 interface MasterProject {
   _id: string;
   projectName: string;
@@ -63,9 +65,9 @@ interface MasterProject {
 }
 
 const statusColors = {
-  Running: "warning",   // usually yellow
-  Completed: "success", // usually green
-  Delayed: "destructive", // usually red
+  Running: "secondary",
+  Completed: "default",
+  Delayed: "destructive",
 } as const;
 
 export function Projects() {
@@ -77,6 +79,7 @@ export function Projects() {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Omit<Project, "_id">>({
+    projectCode: "",
     name: "",
     client: "",
     milestone: "",
@@ -90,11 +93,19 @@ export function Projects() {
     progress: 0,
   });
 
-  // Fetch projects, clients, milestones, master projects
+  useEffect(() => {
+    if (formData.milestone) {
+      const newProgress = calculateProgress(formData.milestone);
+      if (formData.progress !== newProgress) {
+        setFormData((prev) => ({ ...prev, progress: newProgress }));
+      }
+    }
+  }, [formData.milestone, milestones]);
+
   const fetchProjects = async () => {
     setLoading(true);
     try {
-      const res = await api.get("/api/projects");
+      const res = await api.get("http://localhost:7001/api/projects");
       setProjects(res.data);
     } catch (err) {
       console.error(err);
@@ -105,7 +116,7 @@ export function Projects() {
 
   const fetchClients = async () => {
     try {
-      const res = await api.get("/api/clients");
+      const res = await api.get("http://localhost:7001/api/clients");
       setClients(res.data);
     } catch (err) {
       console.error(err);
@@ -114,7 +125,7 @@ export function Projects() {
 
   const fetchMilestones = async () => {
     try {
-      const res = await api.get("/api/milestones");
+      const res = await api.get("http://localhost:7001/api/milestones");
       setMilestones(res.data);
     } catch (err) {
       console.error(err);
@@ -123,7 +134,7 @@ export function Projects() {
 
   const fetchMasterProjects = async () => {
     try {
-      const res = await api.get("/api/masterprojects");
+      const res = await api.get("http://localhost:7001/api/masterprojects");
       setMasterProjects(res.data);
     } catch (err) {
       console.error(err);
@@ -137,9 +148,23 @@ export function Projects() {
     fetchMasterProjects();
   }, []);
 
+  const calculateProgress = (selectedMilestoneId: string) => {
+    if (!milestones.length) return 0;
+    const sorted = [...milestones].sort((a, b) => a.sequence - b.sequence);
+    const idx = sorted.findIndex((m) => m._id === selectedMilestoneId);
+    if (idx === -1) return 0;
+    const sumSelected = sorted.slice(0, idx + 1).reduce((acc, m) => acc + m.sequence, 0);
+    const totalSequence = sorted.reduce((acc, m) => acc + m.sequence, 0);
+    return totalSequence > 0 ? Math.round((sumSelected / totalSequence) * 100) : 0;
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    if (name === "progress") {
+    if (name === "milestone") {
+      const progress = calculateProgress(value);
+      setFormData((s) => ({ ...s, milestone: value, progress }));
+    } else if (name === "progress") {
+      // optional manual input of progress
       const num = Number(value);
       setFormData((s) => ({ ...s, progress: isNaN(num) ? 0 : Math.min(100, Math.max(0, num)) }));
     } else if (name === "status") {
@@ -149,8 +174,9 @@ export function Projects() {
     }
   };
 
-  const resetForm = () =>
+  const resetForm = () => {
     setFormData({
+      projectCode: "",
       name: "",
       client: "",
       milestone: "",
@@ -163,17 +189,29 @@ export function Projects() {
       remark: "",
       progress: 0,
     });
+  };
 
   const handleSubmit = async () => {
     try {
-      if (!formData.name || !formData.client || !formData.milestone || !formData.planStart || !formData.planClose) {
-        alert("Please fill in required fields: Project, Client, Milestone, Plan Start, Plan Close.");
+      if (
+        !formData.projectCode ||
+        !formData.name ||
+        !formData.client ||
+        !formData.milestone ||
+        !formData.planStart ||
+        !formData.planClose
+      ) {
+        alert("Please fill in required fields: Project Code, Project, Client, Milestone, Plan Start, Plan Close.");
+        return;
+      }
+      if (projects.some((p) => p.projectCode === formData.projectCode && p._id !== editingId)) {
+        alert("Project Code must be unique");
         return;
       }
       if (editingId) {
-        await api.put(`/api/projects/${editingId}`, formData);
+        await api.put(`http://localhost:7001/api/projects/${editingId}`, formData);
       } else {
-        await api.post("/api/projects", formData);
+        await api.post("http://localhost:7001/api/projects", formData);
       }
       resetForm();
       setEditingId(null);
@@ -189,9 +227,9 @@ export function Projects() {
     const fmt = (d?: string) => (d ? new Date(d).toLocaleDateString() : "-");
     const clientName = clients.find((c) => c.clientName === project.client)?.clientName || project.client;
     const milestoneName = milestones.find((m) => m._id === project.milestone)?.name || project.milestone;
-
     alert(
       [
+        `Project Code: ${project.projectCode}`,
         `Project: ${project.name}`,
         `Client: ${clientName}`,
         `Milestone: ${milestoneName}`,
@@ -209,7 +247,9 @@ export function Projects() {
 
   const handleEdit = (project: Project) => {
     const toDateInput = (iso?: string) => (iso ? new Date(iso).toISOString().split("T")[0] : "");
+    const progress = calculateProgress(project.milestone); // 🔹 recalc here
     setFormData({
+      projectCode: project.projectCode,
       name: project.name,
       client: project.client,
       milestone: project.milestone,
@@ -220,16 +260,17 @@ export function Projects() {
       status: project.status,
       bottleneck: project.bottleneck || "",
       remark: project.remark || "",
-      progress: project.progress,
+      progress, // 🔹 use recalculated value instead of DB value
     });
     setEditingId(project._id);
     setOpen(true);
   };
 
+
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this project?")) return;
+    if (!window.confirm("Are you sure you want to delete this project?")) return;
     try {
-      await api.delete(`/api/projects/${id}`);
+      await api.delete(`http://localhost:7001/api/projects/${id}`);
       fetchProjects();
     } catch (err) {
       console.error(err);
@@ -252,6 +293,7 @@ export function Projects() {
   };
 
   const columns: ColumnDef<Project>[] = [
+    { accessorKey: "projectCode", header: "Project Code" },
     { accessorKey: "name", header: "Project" },
     { accessorKey: "client", header: "Client", cell: ({ row }) => row.getValue("client") },
     {
@@ -351,7 +393,6 @@ export function Projects() {
           const value = stats[key as keyof typeof stats] || 0;
           const total = stats.total || 1;
           const percentage = Math.min(100, Math.round((value / total) * 100));
-
           return (
             <Card key={key} className={`${bgColor} shadow-md`}>
               <CardHeader className="pb-2">
@@ -376,23 +417,38 @@ export function Projects() {
         <CardContent>{loading ? <p>Loading...</p> : <DataTable columns={columns} data={projects} />}</CardContent>
       </Card>
 
-      {/* Create/Edit Dialog */}
+      {/* Dialog for Create/Edit */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editingId ? "Edit Project" : "Create Project"}</DialogTitle>
           </DialogHeader>
 
-          <div className="grid gap-4 py-4">
-            {/* Project Dropdown */}
-            <div className="grid gap-2">
-              <Label htmlFor="projectName">Project</Label>
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {/* Project Code Input */}
+            <div className="flex flex-col">
+              <Label htmlFor="projectCode" className="mb-2 font-semibold text-sm">Project Code</Label>
+              <Input
+                id="projectCode"
+                type="text"
+                name="projectCode"
+                value={formData.projectCode}
+                onChange={handleChange}
+                readOnly={!!editingId}
+                className="w-full"
+              />
+            </div>
+
+            {/* Project Name Dropdown */}
+            <div className="flex flex-col">
+              <Label htmlFor="projectName" className="mb-2 font-semibold text-sm">Project</Label>
               <select
                 id="projectName"
                 name="projectName"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                disabled={!!editingId}
+                className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm w-full"
               >
                 <option value="">Select Project</option>
                 {masterProjects.map((p) => (
@@ -402,14 +458,15 @@ export function Projects() {
             </div>
 
             {/* Client Dropdown */}
-            <div className="grid gap-2">
-              <Label htmlFor="client">Client</Label>
+            <div className="flex flex-col">
+              <Label htmlFor="client" className="mb-2 font-semibold text-sm">Client</Label>
               <select
                 id="client"
                 name="client"
                 value={formData.client}
                 onChange={handleChange}
-                className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                disabled={!!editingId}
+                className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm w-full"
               >
                 <option value="">Select Client</option>
                 {clients.map((c) => (
@@ -419,9 +476,15 @@ export function Projects() {
             </div>
 
             {/* Milestone Dropdown */}
-            <div className="grid gap-2">
-              <Label htmlFor="milestone">Milestone</Label>
-              <select id="milestone" name="milestone" value={formData.milestone} onChange={handleChange} className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm">
+            <div className="flex flex-col">
+              <Label htmlFor="milestone" className="mb-2 font-semibold text-sm">Milestone</Label>
+              <select
+                id="milestone"
+                name="milestone"
+                value={formData.milestone}
+                onChange={handleChange}
+                className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm w-full"
+              >
                 <option value="">Select Milestone</option>
                 {milestones.map((m) => (
                   <option key={m._id} value={m._id}>{m.name}</option>
@@ -429,45 +492,104 @@ export function Projects() {
               </select>
             </div>
 
-            {/* Dates, Status, Progress, Bottleneck, Remark */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="planStart">Plan Start Date</Label>
-                <Input id="planStart" type="date" name="planStart" value={formData.planStart} onChange={handleChange} />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="planClose">Plan End Date</Label>
-                <Input id="planClose" type="date" name="planClose" value={formData.planClose} onChange={handleChange} />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="actualStart">Actual Start Date</Label>
-                <Input id="actualStart" type="date" name="actualStart" value={formData.actualStart} onChange={handleChange} />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="actualClose">Actual End Date</Label>
-                <Input id="actualClose" type="date" name="actualClose" value={formData.actualClose} onChange={handleChange} />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="status">Status</Label>
-                <select id="status" name="status" value={formData.status} onChange={handleChange} className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm">
-                  <option value="Running">Running</option>
-                  <option value="Completed">Completed</option>
-                  <option value="Delayed">Delayed</option>
-                </select>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="progress">Progress (%)</Label>
-                <Input id="progress" type="number" min={0} max={100} name="progress" value={formData.progress} onChange={handleChange} />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="bottleneck">Bottleneck</Label>
-                <Input id="bottleneck" name="bottleneck" value={formData.bottleneck} onChange={handleChange} />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="remark">Remark</Label>
-                <Input id="remark" name="remark" value={formData.remark} onChange={handleChange} />
-              </div>
+            {/* Plan Start Date */}
+            <div className="flex flex-col">
+              <Label htmlFor="planStart" className="mb-2 font-semibold text-sm">Plan Start Date</Label>
+              <Input
+                id="planStart"
+                type="date"
+                name="planStart"
+                value={formData.planStart}
+                onChange={handleChange}
+                className="w-full"
+              />
             </div>
+
+            {/* Plan Close Date */}
+            <div className="flex flex-col">
+              <Label htmlFor="planClose" className="mb-2 font-semibold text-sm">Plan End Date</Label>
+              <Input
+                id="planClose"
+                type="date"
+                name="planClose"
+                value={formData.planClose}
+                onChange={handleChange}
+                className="w-full"
+              />
+            </div>
+
+            {/* Edit-only Fields */}
+            {editingId && (
+              <>
+                <div className="flex flex-col">
+                  <Label htmlFor="actualStart" className="mb-2 font-semibold text-sm">Actual Start Date</Label>
+                  <Input
+                    id="actualStart"
+                    type="date"
+                    name="actualStart"
+                    value={formData.actualStart}
+                    onChange={handleChange}
+                    className="w-full"
+                  />
+                </div>
+
+                <div className="flex flex-col">
+                  <Label htmlFor="actualClose" className="mb-2 font-semibold text-sm">Actual End Date</Label>
+                  <Input
+                    id="actualClose"
+                    type="date"
+                    name="actualClose"
+                    value={formData.actualClose}
+                    onChange={handleChange}
+                    className="w-full"
+                  />
+                </div>
+
+                <div className="flex flex-col">
+                  <Label htmlFor="status" className="mb-2 font-semibold text-sm">Status</Label>
+                  <select
+                    id="status"
+                    name="status"
+                    value={formData.status}
+                    onChange={handleChange}
+                    className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm w-full"
+                  >
+                    <option value="Running">Running</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Delayed">Delayed</option>
+                  </select>
+                </div>
+
+                {/* Display Progress Bar here instead of input */}
+                <div className="flex flex-col">
+                  <Label htmlFor="progress" className="mb-2 font-semibold text-sm">Progress</Label>
+                  <Progress value={formData.progress} className="w-full" />
+                  <span className="text-right text-sm mt-1">{formData.progress}%</span>
+                </div>
+
+                <div className="flex flex-col">
+                  <Label htmlFor="bottleneck" className="mb-2 font-semibold text-sm">Bottleneck</Label>
+                  <Input
+                    id="bottleneck"
+                    name="bottleneck"
+                    value={formData.bottleneck}
+                    onChange={handleChange}
+                    className="w-full"
+                  />
+                </div>
+
+                <div className="flex flex-col">
+                  <Label htmlFor="remark" className="mb-2 font-semibold text-sm">Remark</Label>
+                  <Input
+                    id="remark"
+                    name="remark"
+                    value={formData.remark}
+                    onChange={handleChange}
+                    className="w-full"
+                  />
+                </div>
+              </>
+            )}
           </div>
 
           <DialogFooter>

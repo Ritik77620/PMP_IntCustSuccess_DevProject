@@ -77,7 +77,7 @@ export function WeeklyTracker() {
   });
 
   const fetchTimeEntries = async () => {
-    const res = await fetch('http://localhost:5000/api/time-entries');
+    const res = await fetch('http://localhost:7001/api/time-entries');
     const data = await res.json();
     setTimeEntries(data);
   };
@@ -117,7 +117,7 @@ export function WeeklyTracker() {
       hours: parseFloat(newEntry.hours),
     };
 
-    await fetch('http://localhost:5000/api/time-entries', {
+    await fetch('http://localhost:7001/api/time-entries', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),

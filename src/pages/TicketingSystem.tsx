@@ -83,7 +83,7 @@ export function TicketingSystem() {
 
   const loadTickets = async () => {
     try {
-      const res = await fetch("http://localhost:5001/api/tickets");
+      const res = await fetch("http://localhost:7001/api/tickets");
       if (!res.ok) throw new Error("Failed to fetch tickets");
       const data = await res.json();
       setTickets(data);
@@ -94,7 +94,7 @@ export function TicketingSystem() {
 
   const loadClients = async () => {
     try {
-      const res = await fetch("http://localhost:5001/api/clients");
+      const res = await fetch("http://localhost:7001/api/clients");
       if (!res.ok) throw new Error("Failed to fetch clients");
       const data = await res.json();
       setClients(
@@ -164,8 +164,8 @@ export function TicketingSystem() {
       const method = editingIndex !== null ? "PUT" : "POST";
       const url =
         editingIndex !== null
-          ? `http://localhost:5001/api/tickets/${form.id}`
-          : "http://localhost:5001/api/tickets";
+          ? `http://103.160.106.200:7001/api/tickets/${form.id}`
+          : "http://103.160.106.200:7001/api/tickets";
 
       const res = await fetch(url, {
         method,
@@ -213,7 +213,7 @@ export function TicketingSystem() {
       if (!confirm("Are you sure you want to delete this ticket?")) return;
 
       const res = await fetch(
-        `http://localhost:5001/api/tickets/${ticketToDelete.id}`,
+        `http://103.160.106.200:7001/api/tickets/${ticketToDelete.id}`,
         { method: "DELETE" }
       );
       if (!res.ok) throw new Error("Delete failed");

@@ -32,7 +32,7 @@ export function ClientMaster() {
 
   const fetchClients = async () => {
     try {
-      const res = await api.get("/api/clients");
+      const res = await api.get("http://localhost:7001/api/clients");
       setClients(res.data);
     } catch (err) {
       console.error("Failed to fetch clients", err);
@@ -50,9 +50,9 @@ export function ClientMaster() {
     }
     try {
       if (form.id) {
-        await api.put(`/api/clients/${form.id}`, form);
+        await api.put(`http://localhost:7001/api/clients/${form.id}`, form);
       } else {
-        await api.post("/api/clients", form);
+        await api.post("http://localhost:7001/api/clients", form);
       }
       fetchClients();
       setForm({
@@ -81,7 +81,7 @@ export function ClientMaster() {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this client?")) return;
     try {
-      await api.delete(`/api/clients/${id}`);
+      await api.delete(`http://localhost:7001/api/clients/${id}`);
       fetchClients();
     } catch (err) {
       console.error("Failed to delete client", err);

@@ -40,7 +40,7 @@ export function Dashboard() {
     const fetchProjects = async () => {
       setLoadingProjects(true);
       try {
-        const res = await api.get("/api/projects");
+        const res = await api.get("http://localhost:7001/api/projects");
         setProjects(res.data);
       } catch (e) {
         console.error("Failed to fetch projects", e);
@@ -52,7 +52,7 @@ export function Dashboard() {
     const fetchTickets = async () => {
       setLoadingTickets(true);
       try {
-        const res = await api.get("/api/tickets");
+        const res = await api.get("http://localhost:7001/api/tickets");
         setTickets(res.data);
       } catch (e) {
         console.error("Failed to fetch tickets", e);
@@ -64,7 +64,7 @@ export function Dashboard() {
     const fetchTasks = async () => {
       setLoadingTasks(true);
       try {
-        const res = await api.get("/api/tasks");
+        const res = await api.get("http://localhost:7001/api/tasks");
         setTasks(res.data);
       } catch (e) {
         console.error("Failed to fetch tasks", e);
@@ -76,7 +76,7 @@ export function Dashboard() {
     const fetchTimeEntries = async () => {
       setLoadingTimeEntries(true);
       try {
-        const res = await api.get("/api/timeentries");
+        const res = await api.get("http://localhost:7001/api/timeentries");
         setTimeEntries(res.data);
       } catch (e) {
         console.error("Failed to fetch time entries", e);

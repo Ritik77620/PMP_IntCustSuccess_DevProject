@@ -31,7 +31,7 @@ export function VendorMaster() {
 
   const fetchVendors = async () => {
     try {
-      const res = await api.get("/api/vendors");
+      const res = await api.get("http://103.160.106.200:7001/api/vendors");
       setVendors(res.data);
     } catch (err) {
       console.error("Failed to fetch vendors", err);
@@ -56,9 +56,9 @@ export function VendorMaster() {
         spoc: form.spoc,
       };
       if (form.id) {
-        await api.put(`/api/vendors/${form.id}`, payload);
+        await api.put(`http://103.160.106.200:7001/api/vendors/${form.id}`, payload);
       } else {
-        await api.post("/api/vendors", payload);
+        await api.post("http://103.160.106.200:7001/api/vendors", payload);
       }
       await fetchVendors();
       setForm({ vendorName: "", vendorLocation: "", vendorGst: "", email: "", spoc: "" });
@@ -81,7 +81,7 @@ export function VendorMaster() {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this vendor?")) return;
     try {
-      await api.delete(`/api/vendors/${id}`);
+      await api.delete(`http://103.160.106.200:7001/api/vendors/${id}`);
       fetchVendors();
     } catch (err) {
       console.error("Failed to delete vendor", err);

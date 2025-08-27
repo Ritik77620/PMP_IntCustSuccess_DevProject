@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 
 const ProjectSchema = new mongoose.Schema(
   {
+    projectCode: { type: String, required: true, unique: true }, // <-- added unique field here
     name: { type: String, required: true },
     client: { type: String, required: true },
     siteName: { type: String },
@@ -15,7 +16,7 @@ const ProjectSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: ["Running", "Completed", "Delayed", "on_hold"],
-      default: "Running", // 🔥 fixed default to match enum
+      default: "Running",
     },
     bottleneck: { type: String },
     remark: { type: String },
@@ -24,7 +25,7 @@ const ProjectSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// ✅ Prevent OverwriteModelError
+// Prevent OverwriteModelError
 const Project =
   mongoose.models.Project || mongoose.model("Project", ProjectSchema);
 

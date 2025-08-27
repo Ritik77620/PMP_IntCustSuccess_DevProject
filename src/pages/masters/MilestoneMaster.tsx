@@ -86,7 +86,7 @@ export default function MilestoneMaster() {
       const method = subForm.id ? "PUT" : "POST";
       const url = subForm.id
         ? `http://localhost:7001/api/submilestones/${subForm.id}`
-        : "http://localhost:7001/api/submilestones";
+        : "http://localhost.200:7001/api/submilestones";
 
       const res = await fetch(url, {
         method,
