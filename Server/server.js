@@ -14,6 +14,7 @@ import milestoneRoutes from "./routes/milestoneRoutes.js";
 import masterProjectRoutes from "./routes/masterProjectRoutes.js";
 import subMilestoneRoutes from "./routes/subMilestoneRoutes.js";
 import ticketRoutes from "./routes/tickets.js";
+import projectMilestoneRoutes from "./routes/projectMilestoneRoutes.js";
 // Load environment variables
 dotenv.config();
 
@@ -41,7 +42,7 @@ app.use("/api/time-entries", timeEntriesRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/milestones", milestoneRoutes);
 app.use("/api/masterprojects", masterProjectRoutes);
-
+app.use("/api/projects", projectMilestoneRoutes);
 app.use("/api/submilestones", subMilestoneRoutes);
 app.use("/api/tickets", ticketRoutes);
 

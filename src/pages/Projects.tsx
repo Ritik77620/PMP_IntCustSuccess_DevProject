@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/ui/data-table";
@@ -164,7 +165,6 @@ export function Projects() {
       const progress = calculateProgress(value);
       setFormData((s) => ({ ...s, milestone: value, progress }));
     } else if (name === "progress") {
-      // optional manual input of progress
       const num = Number(value);
       setFormData((s) => ({ ...s, progress: isNaN(num) ? 0 : Math.min(100, Math.max(0, num)) }));
     } else if (name === "status") {
@@ -224,7 +224,7 @@ export function Projects() {
   };
 
   const handleView = (project: Project) => {
-    const fmt = (d?: string) => (d ? new Date(d).toLocaleDateString() : "-");
+    const fmt = (d?: string) => (d ? new Date(d).toISOString().split("T")[0] : "-");
     const clientName = clients.find((c) => c.clientName === project.client)?.clientName || project.client;
     const milestoneName = milestones.find((m) => m._id === project.milestone)?.name || project.milestone;
     alert(
@@ -247,7 +247,7 @@ export function Projects() {
 
   const handleEdit = (project: Project) => {
     const toDateInput = (iso?: string) => (iso ? new Date(iso).toISOString().split("T")[0] : "");
-    const progress = calculateProgress(project.milestone); // 🔹 recalc here
+    const progress = calculateProgress(project.milestone);
     setFormData({
       projectCode: project.projectCode,
       name: project.name,
@@ -260,12 +260,11 @@ export function Projects() {
       status: project.status,
       bottleneck: project.bottleneck || "",
       remark: project.remark || "",
-      progress, // 🔹 use recalculated value instead of DB value
+      progress,
     });
     setEditingId(project._id);
     setOpen(true);
   };
-
 
   const handleDelete = async (id: string) => {
     if (!window.confirm("Are you sure you want to delete this project?")) return;
@@ -289,42 +288,50 @@ export function Projects() {
     const v = value as string | undefined;
     if (!v) return <span>-</span>;
     const d = new Date(v);
-    return isNaN(d.getTime()) ? <span>-</span> : <span>{d.toLocaleDateString()}</span>;
+    if (isNaN(d.getTime())) return <span>-</span>;
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return <span>{`${year}-${month}-${day}`}</span>;
   };
 
   const columns: ColumnDef<Project>[] = [
-    { accessorKey: "projectCode", header: "Project Code" },
-    { accessorKey: "name", header: "Project" },
-    { accessorKey: "client", header: "Client", cell: ({ row }) => row.getValue("client") },
+    { accessorKey: "projectCode", header: "PROJECT CODE" },
+    {
+      accessorKey: "name",
+      header: "PROJECT",
+      cell: ({ row, getValue }) => {
+        const projectId = row.original._id;
+        const projectName = getValue<string>();
+        return (
+          <Link
+            to={`/projects/${projectId}`}
+            className="text-black hover:text-blue-600 hover:underline transition-colors duration-200"
+          >
+            {projectName}
+          </Link>
+        );
+      },
+    },
+    { accessorKey: "client", header: "CLIENT", cell: ({ row }) => row.getValue("client") },
     {
       accessorKey: "milestone",
-      header: "Milestone",
+      header: "MILESTONE",
       cell: ({ row }) => milestones.find((m) => m._id === row.getValue("milestone"))?.name || row.getValue("milestone"),
     },
-    { accessorKey: "planStart", header: "Plan Start Date", cell: ({ row }) => fmtDateCell(row.getValue("planStart")) },
-    { accessorKey: "planClose", header: "Plan End Date", cell: ({ row }) => fmtDateCell(row.getValue("planClose")) },
-    { accessorKey: "actualStart", header: "Actual Start Date", cell: ({ row }) => fmtDateCell(row.getValue("actualStart")) },
-    { accessorKey: "actualClose", header: "Actual End Date", cell: ({ row }) => fmtDateCell(row.getValue("actualClose")) },
+    { accessorKey: "planStart", header: "PLAN START DATE", cell: ({ row }) => fmtDateCell(row.getValue("planStart")) },
+    { accessorKey: "planClose", header: "PLAN END DATE", cell: ({ row }) => fmtDateCell(row.getValue("planClose")) },
+    { accessorKey: "actualStart", header: "ACTUAL START DATE", cell: ({ row }) => fmtDateCell(row.getValue("actualStart")) },
+    { accessorKey: "actualClose", header: "ACTUAL END DATE", cell: ({ row }) => fmtDateCell(row.getValue("actualClose")) },
     {
       accessorKey: "status",
-      header: "Status",
+      header: "STATUS",
       cell: ({ row }) => {
         const status = row.getValue("status") as keyof typeof statusColors;
         return <Badge variant={statusColors[status]}>{status}</Badge>;
       },
     },
-    { accessorKey: "bottleneck", header: "Bottleneck" },
-    { accessorKey: "remark", header: "Remark" },
-    {
-      accessorKey: "progress",
-      header: "Progress",
-      cell: ({ row }) => (
-        <div className="space-y-1">
-          <span>{row.getValue("progress")}%</span>
-          <Progress value={Number(row.getValue("progress"))} className="w-24" />
-        </div>
-      ),
-    },
+    
     {
       id: "actions",
       header: "",
@@ -364,31 +371,16 @@ export function Projects() {
         </Button>
       </motion.div>
 
-      {/* Colorful Stats */}
+      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {["total", "Running", "Completed", "Delayed"].map((key) => {
-          let bgColor = "";
-          let progressColor = "";
+          let bgColor = "", progressColor = "";
           switch (key) {
-            case "total":
-              bgColor = "bg-blue-100 text-blue-800";
-              progressColor = "bg-blue-600";
-              break;
-            case "Running":
-              bgColor = "bg-yellow-100 text-yellow-800";
-              progressColor = "bg-yellow-600";
-              break;
-            case "Completed":
-              bgColor = "bg-green-100 text-green-800";
-              progressColor = "bg-green-600";
-              break;
-            case "Delayed":
-              bgColor = "bg-red-100 text-red-800";
-              progressColor = "bg-red-600";
-              break;
-            default:
-              bgColor = "bg-gray-100 text-gray-800";
-              progressColor = "bg-gray-600";
+            case "total": bgColor = "bg-blue-100 text-blue-800"; progressColor = "bg-blue-600"; break;
+            case "Running": bgColor = "bg-yellow-100 text-yellow-800"; progressColor = "bg-yellow-600"; break;
+            case "Completed": bgColor = "bg-green-100 text-green-800"; progressColor = "bg-green-600"; break;
+            case "Delayed": bgColor = "bg-red-100 text-red-800"; progressColor = "bg-red-600"; break;
+            default: bgColor = "bg-gray-100 text-gray-800"; progressColor = "bg-gray-600";
           }
           const value = stats[key as keyof typeof stats] || 0;
           const total = stats.total || 1;
@@ -396,7 +388,7 @@ export function Projects() {
           return (
             <Card key={key} className={`${bgColor} shadow-md`}>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">{key.charAt(0).toUpperCase() + key.slice(1)}</CardTitle>
+                <CardTitle className="text-sm font-medium">{key.toUpperCase()}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
                 <p className="text-2xl font-bold">{value}</p>
@@ -412,12 +404,12 @@ export function Projects() {
       {/* Projects Table */}
       <Card>
         <CardHeader>
-          <CardTitle>All Projects</CardTitle>
+          <CardTitle>ALL PROJECTS</CardTitle>
         </CardHeader>
         <CardContent>{loading ? <p>Loading...</p> : <DataTable columns={columns} data={projects} />}</CardContent>
       </Card>
 
-      {/* Dialog for Create/Edit */}
+      {/* Dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
@@ -425,168 +417,74 @@ export function Projects() {
           </DialogHeader>
 
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {/* Project Code Input */}
+            {/* Project Code */}
             <div className="flex flex-col">
               <Label htmlFor="projectCode" className="mb-2 font-semibold text-sm">Project Code</Label>
-              <Input
-                id="projectCode"
-                type="text"
-                name="projectCode"
-                value={formData.projectCode}
-                onChange={handleChange}
-                readOnly={!!editingId}
-                className="w-full"
-              />
+              <Input id="projectCode" type="text" name="projectCode" value={formData.projectCode} onChange={handleChange} readOnly={!!editingId} className="w-full" />
             </div>
 
-            {/* Project Name Dropdown */}
+            {/* Project Name */}
             <div className="flex flex-col">
               <Label htmlFor="projectName" className="mb-2 font-semibold text-sm">Project</Label>
-              <select
-                id="projectName"
-                name="projectName"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                disabled={!!editingId}
-                className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm w-full"
-              >
+              <select id="projectName" name="projectName" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} disabled={!!editingId} className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm w-full">
                 <option value="">Select Project</option>
-                {masterProjects.map((p) => (
-                  <option key={p._id} value={p.projectName}>{p.projectName}</option>
-                ))}
+                {masterProjects.map((p) => <option key={p._id} value={p.projectName}>{p.projectName}</option>)}
               </select>
             </div>
 
-            {/* Client Dropdown */}
+            {/* Client */}
             <div className="flex flex-col">
               <Label htmlFor="client" className="mb-2 font-semibold text-sm">Client</Label>
-              <select
-                id="client"
-                name="client"
-                value={formData.client}
-                onChange={handleChange}
-                disabled={!!editingId}
-                className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm w-full"
-              >
+              <select id="client" name="client" value={formData.client} onChange={handleChange} disabled={!!editingId} className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm w-full">
                 <option value="">Select Client</option>
-                {clients.map((c) => (
-                  <option key={c.id} value={c.clientName}>{c.clientName}</option>
-                ))}
+                {clients.map((c) => <option key={c.id} value={c.clientName}>{c.clientName}</option>)}
               </select>
             </div>
 
-            {/* Milestone Dropdown */}
+            {/* Milestone */}
             <div className="flex flex-col">
               <Label htmlFor="milestone" className="mb-2 font-semibold text-sm">Milestone</Label>
-              <select
-                id="milestone"
-                name="milestone"
-                value={formData.milestone}
-                onChange={handleChange}
-                className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm w-full"
-              >
+              <select id="milestone" name="milestone" value={formData.milestone} onChange={handleChange} className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm w-full">
                 <option value="">Select Milestone</option>
-                {milestones.map((m) => (
-                  <option key={m._id} value={m._id}>{m.name}</option>
-                ))}
+                {milestones.map((m) => <option key={m._id} value={m._id}>{m.name}</option>)}
               </select>
             </div>
 
-            {/* Plan Start Date */}
+            {/* Plan Start */}
             <div className="flex flex-col">
               <Label htmlFor="planStart" className="mb-2 font-semibold text-sm">Plan Start Date</Label>
-              <Input
-                id="planStart"
-                type="date"
-                name="planStart"
-                value={formData.planStart}
-                onChange={handleChange}
-                className="w-full"
-              />
+              <Input id="planStart" type="date" name="planStart" value={formData.planStart} onChange={handleChange} className="w-full" />
             </div>
 
-            {/* Plan Close Date */}
+            {/* Plan Close */}
             <div className="flex flex-col">
-              <Label htmlFor="planClose" className="mb-2 font-semibold text-sm">Plan End Date</Label>
-              <Input
-                id="planClose"
-                type="date"
-                name="planClose"
-                value={formData.planClose}
-                onChange={handleChange}
-                className="w-full"
-              />
+              <Label htmlFor="planClose" className="mb-2 font-semibold text-sm">Plan Close Date</Label>
+              <Input id="planClose" type="date" name="planClose" value={formData.planClose} onChange={handleChange} className="w-full" />
             </div>
 
-            {/* Edit-only Fields */}
+            {/* Extra fields only for edit */}
             {editingId && (
               <>
+                {/* Actual Start */}
                 <div className="flex flex-col">
                   <Label htmlFor="actualStart" className="mb-2 font-semibold text-sm">Actual Start Date</Label>
-                  <Input
-                    id="actualStart"
-                    type="date"
-                    name="actualStart"
-                    value={formData.actualStart}
-                    onChange={handleChange}
-                    className="w-full"
-                  />
+                  <Input id="actualStart" type="date" name="actualStart" value={formData.actualStart} onChange={handleChange} className="w-full" />
                 </div>
 
+                {/* Actual Close */}
                 <div className="flex flex-col">
-                  <Label htmlFor="actualClose" className="mb-2 font-semibold text-sm">Actual End Date</Label>
-                  <Input
-                    id="actualClose"
-                    type="date"
-                    name="actualClose"
-                    value={formData.actualClose}
-                    onChange={handleChange}
-                    className="w-full"
-                  />
+                  <Label htmlFor="actualClose" className="mb-2 font-semibold text-sm">Actual Close Date</Label>
+                  <Input id="actualClose" type="date" name="actualClose" value={formData.actualClose} onChange={handleChange} className="w-full" />
                 </div>
 
+                {/* Status */}
                 <div className="flex flex-col">
                   <Label htmlFor="status" className="mb-2 font-semibold text-sm">Status</Label>
-                  <select
-                    id="status"
-                    name="status"
-                    value={formData.status}
-                    onChange={handleChange}
-                    className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm w-full"
-                  >
+                  <select id="status" name="status" value={formData.status} onChange={handleChange} className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm w-full">
                     <option value="Running">Running</option>
                     <option value="Completed">Completed</option>
                     <option value="Delayed">Delayed</option>
                   </select>
-                </div>
-
-                {/* Display Progress Bar here instead of input */}
-                <div className="flex flex-col">
-                  <Label htmlFor="progress" className="mb-2 font-semibold text-sm">Progress</Label>
-                  <Progress value={formData.progress} className="w-full" />
-                  <span className="text-right text-sm mt-1">{formData.progress}%</span>
-                </div>
-
-                <div className="flex flex-col">
-                  <Label htmlFor="bottleneck" className="mb-2 font-semibold text-sm">Bottleneck</Label>
-                  <Input
-                    id="bottleneck"
-                    name="bottleneck"
-                    value={formData.bottleneck}
-                    onChange={handleChange}
-                    className="w-full"
-                  />
-                </div>
-
-                <div className="flex flex-col">
-                  <Label htmlFor="remark" className="mb-2 font-semibold text-sm">Remark</Label>
-                  <Input
-                    id="remark"
-                    name="remark"
-                    value={formData.remark}
-                    onChange={handleChange}
-                    className="w-full"
-                  />
                 </div>
               </>
             )}

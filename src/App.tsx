@@ -13,13 +13,15 @@ import { Profile } from "@/pages/Profile";
 import { Settings } from "@/pages/Settings";
 import NotFound from "./pages/NotFound";
 
+import ProjectDetails from "@/pages/ProjectDetails";
+
 // Masters Subpages
 import { ProjectMaster } from "@/pages/masters/ProjectMaster";
 import { ClientMaster } from "@/pages/masters/ClientMaster";
 import { VendorMaster } from "@/pages/masters/VendorMaster";
 import MilestoneMaster from "./pages/masters/MilestoneMaster";
 import { UserMaster } from "@/pages/masters/UserMaster";
-import { TaskMaster } from "@/pages/masters/TaskMaster";  
+import { TaskMaster } from "@/pages/masters/TaskMaster";
 import { useThemeStore } from "@/store/themeStore";
 import { useEffect } from "react";
 
@@ -31,6 +33,8 @@ const App = () => {
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
   }, [theme]);
+
+
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -49,7 +53,7 @@ const App = () => {
 
               {/* Masters Main Page */}
               <Route path="masters" element={<Masters />} />
-
+              <Route path="/projects/:projectId" element={<ProjectDetails />} />
               {/* Masters Subpages */}
               <Route path="masters/project" element={<ProjectMaster />} />
               <Route path="masters/client" element={<ClientMaster />} />
