@@ -3,15 +3,15 @@ import Milestone from "../models/Milestone.js";
 
 const router = express.Router();
 
-// GET all milestones sorted by sequence ascending
+// GET all milestones sorted by weightage ascending
 router.get("/", async (req, res) => {
   try {
-    const milestones = await Milestone.find().sort({ sequence: 1 });
+    const milestones = await Milestone.find().sort({ weightage: 1 });
     // Map to frontend-friendly format
     const data = milestones.map(m => ({
       id: m._id.toString(),
       name: m.name,
-      sequence: m.sequence
+      weightage: m.weightage
     }));
     res.json(data);
   } catch (error) {
@@ -23,13 +23,17 @@ router.get("/", async (req, res) => {
 // POST add new milestone
 router.post("/", async (req, res) => {
   try {
-    const { name, sequence } = req.body;
-    if (!name || sequence === undefined) {
-      return res.status(400).json({ message: "Name and sequence are required" });
+    const { name, weightage } = req.body;
+    if (!name || weightage === undefined) {
+      return res.status(400).json({ message: "Name and weightage are required" });
     }
-    const milestone = new Milestone({ name, sequence });
+    const milestone = new Milestone({ name, weightage });
     await milestone.save();
-    res.status(201).json({ id: milestone._id.toString(), name: milestone.name, sequence: milestone.sequence });
+    res.status(201).json({ 
+      id: milestone._id.toString(), 
+      name: milestone.name, 
+      weightage: milestone.weightage 
+    });
   } catch (error) {
     console.error("Milestone POST error:", error);
     res.status(500).json({ message: "Failed to save milestone" });
@@ -39,19 +43,23 @@ router.post("/", async (req, res) => {
 // PUT update milestone by id
 router.put("/:id", async (req, res) => {
   try {
-    const { name, sequence } = req.body;
-    if (!name || sequence === undefined) {
-      return res.status(400).json({ message: "Name and sequence are required" });
+    const { name, weightage } = req.body;
+    if (!name || weightage === undefined) {
+      return res.status(400).json({ message: "Name and weightage are required" });
     }
     const milestone = await Milestone.findByIdAndUpdate(
       req.params.id,
-      { name, sequence },
+      { name, weightage },
       { new: true }
     );
     if (!milestone) {
       return res.status(404).json({ message: "Milestone not found" });
     }
-    res.json({ id: milestone._id.toString(), name: milestone.name, sequence: milestone.sequence });
+    res.json({ 
+      id: milestone._id.toString(), 
+      name: milestone.name, 
+      weightage: milestone.weightage 
+    });
   } catch (error) {
     console.error("Milestone PUT error:", error);
     res.status(500).json({ message: "Failed to update milestone" });

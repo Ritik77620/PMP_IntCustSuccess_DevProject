@@ -18,7 +18,7 @@ router.get("/:projectId/projectMilestones", async (req, res) => {
 // Add a new milestone for a project
 router.post("/:projectId/projectMilestones", async (req, res) => {
   const { projectId } = req.params;
-  const data = { ...req.body, projectId };
+  const data = { ...req.body, projectId, status: req.body.status || "Open" }; // default status
 
   try {
     const milestone = new ProjectMilestone(data);

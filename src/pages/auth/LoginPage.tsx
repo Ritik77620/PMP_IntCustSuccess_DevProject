@@ -1,130 +1,90 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuthStore } from '@/store/authStore';
-import { Eye, EyeOff } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { mockUsers } from '@/data/mockData';
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuthStore } from "@/store/authStore";
+import { Eye, EyeOff } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import api from "@/lib/api";
+import { useNavigate } from "react-router-dom";
 
 export function LoginPage() {
-  const [email, setEmail] = useState('ritik@ppt.com');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuthStore();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    setTimeout(() => {
-      const user = mockUsers.find(u => u.email === email);
-      
-      if (user && password === 'password123') {
-        login(
-          {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            designation: user.designation,
-            profilePicture: user.profilePicture || undefined,
-          },
-          'mock-jwt-token'
-        );
-        toast({
-          title: 'Welcome back!',
-          description: 'You have been successfully logged in.',
-        });
-      } else {
-        toast({
-          title: 'Login failed',
-          description: 'Invalid email or password. Try: password123',
-          variant: 'destructive',
-        });
-      }
+    try {
+      const res = await api.post("http://localhost:7001/api/users/login", { email, passCode: password });
+      const user = res.data;
+
+      login(
+        {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          designation: ""
+        },
+        "jwt-token-placeholder"
+      );
+
+      toast({
+        title: "Welcome back!",
+        description: `Hello ${user.name}, you are logged in successfully.`,
+      });
+
+      navigate("/"); // redirect after login
+    } catch (err: any) {
+      toast({
+        title: "Login failed",
+        description: err.response?.data?.error || "Invalid credentials",
+        variant: "destructive",
+      });
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (
     <div className="relative min-h-screen flex items-center justify-center">
-      {/* Background Image (fit to screen) */}
-      <div
-        className="absolute inset-0 bg-no-repeat bg-center bg-stretech bg-cover"
-        style={{ backgroundImage: "url('/OrganizationLogo.png')" }}
-      />
-      {/* Overlay for readability */}
+      <div className="absolute inset-0 bg-no-repeat bg-center bg-cover" style={{ backgroundImage: "url('/OrganizationLogo.png')" }} />
       <div className="absolute inset-0 bg-black/40" />
-
-      {/* Login Card */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="relative z-10 w-full max-w-md"
-      >
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="relative z-10 w-full max-w-md">
         <Card className="shadow-elegant">
           <CardHeader className="text-center">
             <div className="mx-auto h-12 w-20 gradient-primary rounded-xl flex items-center justify-center mb-4">
               <span className="text-primary-foreground font-bold text-xl">PPTPL</span>
             </div>
             <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
-            <CardDescription>
-              Sign in to Power Profit Technologies Project Management System
-            </CardDescription>
+            <CardDescription>Sign in to Power Profit Technologies Project Management System</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="transition-smooth focus:shadow-glow"
-                />
+                <Input id="email" type="email" placeholder="Enter your email" value={email} onChange={(e) => setEmail(e.target.value)} required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
                 <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="pr-10 transition-smooth focus:shadow-glow"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4 text-muted-foreground" />
-                    ) : (
-                      <Eye className="h-4 w-4 text-muted-foreground" />
-                    )}
+                  <Input id="password" type={showPassword ? "text" : "password"} placeholder="Enter your password" value={password} onChange={(e) => setPassword(e.target.value)} required className="pr-10" />
+                  <Button type="button" variant="ghost" size="icon" className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent" onClick={() => setShowPassword(!showPassword)}>
+                    {showPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
                   </Button>
                 </div>
               </div>
-              <Button 
-                type="submit" 
-                className="w-full gradient-primary transition-smooth hover:shadow-glow"
-                disabled={isLoading}
-              >
-                {isLoading ? 'Signing in...' : 'Sign In'}
+              <Button type="submit" className="w-full gradient-primary" disabled={isLoading}>
+                {isLoading ? "Signing in..." : "Sign In"}
               </Button>
             </form>
           </CardContent>

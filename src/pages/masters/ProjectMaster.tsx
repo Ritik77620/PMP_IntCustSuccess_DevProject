@@ -1,32 +1,44 @@
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+"use client";
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import api from "@/lib/api";
+import { API_ENDPOINTS } from "@/config/apiConfig";
 
 interface Project {
   _id?: string;
   projectName: string;
-  projectCode: string;
   description: string;
 }
 
+const normalizeProject = (p: any): Project => ({
+  _id: p._id,
+  projectName: p.projectName ?? p.name ?? p.project_name ?? "",
+  description: p.description ?? p.projectDescription ?? "",
+});
+
 export function ProjectMaster() {
   const [projects, setProjects] = useState<Project[]>([]);
-  const [form, setForm] = useState<Project>({
-    projectName: '',
-    projectCode: '',
-    description: '',
-  });
-
+  const [form, setForm] = useState<Project>({ projectName: "", description: "" });
   const [showForm, setShowForm] = useState(false);
 
-  // Fetch projects from backend
+  // Fetch projects
+  const fetchProjects = async () => {
+    try {
+      const res = await api.get(API_ENDPOINTS.masterProjects);
+      const sortedProjects = res.data
+        .map(normalizeProject)
+        .sort((a: Project, b: Project) => a.projectName.localeCompare(b.projectName));
+      setProjects(sortedProjects);
+    } catch (err) {
+      console.error("Error fetching projects:", err);
+    }
+  };
+
   useEffect(() => {
-    fetch('http://103.160.106.200:7001/api/masterprojects')
-      .then((res) => res.json())
-      .then((data) => setProjects(data))
-      .catch((err) => console.error('Error fetching projects:', err));
+    fetchProjects();
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -34,30 +46,32 @@ export function ProjectMaster() {
   };
 
   const handleSave = async () => {
-    if (!form.projectName || !form.projectCode) return;
+    if (!form.projectName) return;
 
-    if (form._id) {
-      // Update project
-      const res = await fetch(`http://103.160.106.200:7001/api/masterprojects/${form._id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+    try {
+      let res;
+      const payload = { projectName: form.projectName, description: form.description };
+      if (form._id) {
+        res = await api.put(API_ENDPOINTS.masterProjectById(form._id), payload);
+      } else {
+        res = await api.post(API_ENDPOINTS.masterProjects, payload);
+      }
+
+      const projectData = normalizeProject(res.data);
+
+      setProjects((prev) => {
+        const updatedProjects = form._id
+          ? prev.map((p) => (p._id === projectData._id ? projectData : p))
+          : [...prev, projectData];
+        return updatedProjects.sort((a, b) => a.projectName.localeCompare(b.projectName));
       });
-      const updated = await res.json();
-      setProjects(projects.map((p) => (p._id === updated._id ? updated : p)));
-    } else {
-      // Create project
-      const res = await fetch('http://103.160.106.200:7001/api/masterprojects', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
-      const newProject = await res.json();
-      setProjects([...projects, newProject]);
+
+      setForm({ projectName: "", description: "" });
+      setShowForm(false);
+    } catch (err: any) {
+      console.error("Error saving project:", err.response?.data || err.message || err);
+      alert("Failed to save project: " + (err.response?.data?.message || err.message));
     }
-
-    setForm({ projectName: '', projectCode: '', description: '' });
-    setShowForm(false);
   };
 
   const handleEdit = (id: string) => {
@@ -69,10 +83,15 @@ export function ProjectMaster() {
   };
 
   const handleDelete = async (id: string) => {
-    await fetch(`http://127.0.0.1:7001/api/masterprojects/${id}`, {
-      method: 'DELETE',
-    });
-    setProjects(projects.filter((p) => p._id !== id));
+    if (!window.confirm("Are you sure you want to delete this project?")) return;
+
+    try {
+      await api.delete(API_ENDPOINTS.masterProjectById(id));
+      setProjects((prev) => prev.filter((p) => p._id !== id));
+    } catch (err) {
+      console.error("Error deleting project:", err);
+      alert("Failed to delete project");
+    }
   };
 
   return (
@@ -84,27 +103,11 @@ export function ProjectMaster() {
       {showForm && (
         <Card>
           <CardHeader>
-            <CardTitle>{form._id ? 'Edit Project' : 'Add New Project'}</CardTitle>
+            <CardTitle>{form._id ? "Edit Project" : "Add New Project"}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Input 
-              name="projectName" 
-              placeholder="Project Name" 
-              value={form.projectName} 
-              onChange={handleChange} 
-            />
-            <Input 
-              name="projectCode" 
-              placeholder="Project Code" 
-              value={form.projectCode} 
-              onChange={handleChange} 
-            />
-            <Input 
-              name="description" 
-              placeholder="Project Description" 
-              value={form.description} 
-              onChange={handleChange} 
-            />
+            <Input name="projectName" placeholder="Project Name" value={form.projectName} onChange={handleChange} />
+            <Input name="description" placeholder="Project Description" value={form.description} onChange={handleChange} />
             <div className="flex space-x-2">
               <Button onClick={handleSave}>Save</Button>
               <Button variant="secondary" onClick={() => setShowForm(false)}>Cancel</Button>
@@ -122,7 +125,6 @@ export function ProjectMaster() {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
-                <TableHead>Code</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -130,9 +132,8 @@ export function ProjectMaster() {
             <TableBody>
               {projects.map((p) => (
                 <TableRow key={p._id}>
-                  <TableCell>{p.projectName}</TableCell>
-                  <TableCell>{p.projectCode}</TableCell>
-                  <TableCell>{p.description}</TableCell>
+                  <TableCell>{p.projectName || "-"}</TableCell>
+                  <TableCell>{p.description || "-"}</TableCell>
                   <TableCell className="space-x-2">
                     <Button size="sm" onClick={() => handleEdit(p._id!)}>Edit</Button>
                     <Button size="sm" variant="destructive" onClick={() => handleDelete(p._id!)}>Delete</Button>

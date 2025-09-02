@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Download, Edit, Trash2 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
+import { API_ENDPOINTS } from "@/config/apiConfig"; // updated import
 
 interface Ticket {
   id: string;
@@ -27,14 +28,13 @@ interface Ticket {
 
 interface Client {
   name: string;
-  location: string;
+  locations: string[];
 }
-
-
 
 export function TicketingSystem() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
+  const [locations, setLocations] = useState<string[]>([]);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [form, setForm] = useState<Ticket>({
     id: "",
@@ -83,7 +83,7 @@ export function TicketingSystem() {
 
   const loadTickets = async () => {
     try {
-      const res = await fetch("http://localhost:7001/api/tickets");
+      const res = await fetch(API_ENDPOINTS.tickets);
       if (!res.ok) throw new Error("Failed to fetch tickets");
       const data = await res.json();
       setTickets(data);
@@ -94,11 +94,14 @@ export function TicketingSystem() {
 
   const loadClients = async () => {
     try {
-      const res = await fetch("http://localhost:7001/api/clients");
+      const res = await fetch(API_ENDPOINTS.clients);
       if (!res.ok) throw new Error("Failed to fetch clients");
       const data = await res.json();
       setClients(
-        data.map((c: any) => ({ name: c.clientName, location: c.clientLocation }))
+        data.map((c: any) => ({
+          name: c.clientName,
+          locations: c.locations.map((loc: any) => loc.locationName),
+        }))
       );
     } catch (error) {
       console.error("Error loading clients:", error);
@@ -118,7 +121,8 @@ export function TicketingSystem() {
 
     if (name === "clientName") {
       const client = clients.find((c) => c.name === value);
-      updatedForm.location = client ? client.location : "";
+      setLocations(client ? client.locations : []);
+      updatedForm.location = client?.locations[0] || "";
     }
 
     if (name === "dateClosed" || name === "timeClosed" || name === "status") {
@@ -138,84 +142,102 @@ export function TicketingSystem() {
   };
 
   const handleSubmit = async () => {
-    try {
-      const now = new Date();
-      const today = now.toISOString().split("T")[0];
-      const currentTime = now.toTimeString().slice(0, 5);
-      const ticketNumber =
-        editingIndex !== null ? form.ticketNumber : generateTicketNumber();
+  try {
+    // Validation: if status is Closed, resolution is mandatory, min 20 chars, not numeric
+    if (form.status === "Closed") {
+      const res = form.resolution.trim();
+      if (!res) {
+        alert("Resolution is required when closing a ticket.");
+        return;
+      }
+      if (res.length < 20) {
+        alert("Resolution must be at least 20 characters.");
+        return;
+      }
+      if (/^\d+$/.test(res)) {
+        alert("Resolution cannot be numeric only.");
+        return;
+      }
+    }
 
-      const newTicket = {
-        ...form,
-        ticketNumber,
-        dateRaised: form.dateRaised || today,
-        timeRaised: form.timeRaised || currentTime,
-        totalDaysElapsed:
-          form.status === "Closed"
-            ? calculateElapsedDays(
+    const now = new Date();
+    const today = now.toISOString().split("T")[0];
+    const currentTime = now.toTimeString().slice(0, 5);
+    const ticketNumber =
+      editingIndex !== null ? form.ticketNumber : generateTicketNumber();
+
+    const newTicket = {
+      ...form,
+      ticketNumber,
+      dateRaised: form.dateRaised || today,
+      timeRaised: form.timeRaised || currentTime,
+      totalDaysElapsed:
+        form.status === "Closed"
+          ? calculateElapsedDays(
               form.dateRaised,
               form.timeRaised,
               form.dateClosed,
               form.timeClosed
             )
-            : "",
-      };
+          : "",
+    };
 
-      const method = editingIndex !== null ? "PUT" : "POST";
-      const url =
-        editingIndex !== null
-          ? `http://103.160.106.200:7001/api/tickets/${form.id}`
-          : "http://103.160.106.200:7001/api/tickets";
+    const method = editingIndex !== null ? "PUT" : "POST";
+    const url =
+      editingIndex !== null
+        ? API_ENDPOINTS.ticketById(form.id)
+        : API_ENDPOINTS.tickets;
 
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newTicket),
-      });
+    const resFetch = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newTicket),
+    });
 
-      if (!res.ok) throw new Error("Failed to save ticket");
+    if (!resFetch.ok) throw new Error("Failed to save ticket");
 
-      await loadTickets();
+    await loadTickets();
 
-      setForm({
-        id: "",
-        ticketNumber: "",
-        clientName: "",
-        location: "",
-        dateRaised: "",
-        timeRaised: "",
-        category: "Issue",
-        raisedBy: "",
-        assignedTo: "",
-        description: "",
-        totalDaysElapsed: "",
-        status: "Open",
-        priority: "Medium",
-        resolution: "",
-        dateClosed: "",
-        timeClosed: "",
-      });
-      setEditingIndex(null);
-    } catch (error: any) {
-      alert(error.message);
-    }
-  };
+    setForm({
+      id: "",
+      ticketNumber: "",
+      clientName: "",
+      location: "",
+      dateRaised: "",
+      timeRaised: "",
+      category: "Issue",
+      raisedBy: "",
+      assignedTo: "",
+      description: "",
+      totalDaysElapsed: "",
+      status: "Open",
+      priority: "Medium",
+      resolution: "",
+      dateClosed: "",
+      timeClosed: "",
+    });
+    setEditingIndex(null);
+    setLocations([]);
+  } catch (error: any) {
+    alert(error.message);
+  }
+};
 
   const handleEdit = (index: number) => {
     setEditingIndex(index);
     setForm(tickets[index]);
+    const client = clients.find((c) => c.name === tickets[index].clientName);
+    setLocations(client ? client.locations : []);
   };
 
-  const handleDelete = async (
-    index: number) => {
+  const handleDelete = async (index: number) => {
     try {
       const ticketToDelete = tickets[index];
       if (!confirm("Are you sure you want to delete this ticket?")) return;
 
-      const res = await fetch(
-        `http://103.160.106.200:7001/api/tickets/${ticketToDelete.id}`,
-        { method: "DELETE" }
-      );
+      const res = await fetch(API_ENDPOINTS.ticketById(ticketToDelete.id), {
+        method: "DELETE",
+      });
       if (!res.ok) throw new Error("Delete failed");
 
       await loadTickets();
@@ -240,6 +262,7 @@ export function TicketingSystem() {
           dateClosed: "",
           timeClosed: "",
         });
+        setLocations([]);
       }
     } catch (error: any) {
       alert(error.message);
@@ -247,7 +270,6 @@ export function TicketingSystem() {
   };
 
   const exportToExcel = () => {
-    // Map tickets with custom headers
     const exportData = tickets.map((t) => ({
       "Ticket Number": t.ticketNumber,
       "Client Name": t.clientName,
@@ -266,12 +288,10 @@ export function TicketingSystem() {
       "Time Closed": t.timeClosed,
     }));
 
-    // Create worksheet & workbook
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Tickets");
 
-    // Export
     const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
     const data = new Blob([excelBuffer], { type: "application/octet-stream" });
     saveAs(data, "TicketsTacker.xlsx");
@@ -349,7 +369,6 @@ export function TicketingSystem() {
         </div>
       </div>
 
-
       {/* Form */}
       <Card className="border-2 border-blue-500 shadow-lg hover:shadow-xl transition-all duration-300">
         <CardHeader>
@@ -359,7 +378,6 @@ export function TicketingSystem() {
         </CardHeader>
 
         <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {/* Full form fields copied from your original code */}
           {/* Ticket Number */}
           <div className="flex flex-col">
             <label className="font-semibold mb-1">Ticket Number</label>
@@ -373,7 +391,7 @@ export function TicketingSystem() {
             />
           </div>
 
-          {/* Client */}
+          {/* Client Name */}
           <div className="flex flex-col">
             <label className="font-semibold mb-1">Client Name</label>
             <select
@@ -391,17 +409,22 @@ export function TicketingSystem() {
             </select>
           </div>
 
-          {/* Location */}
+          {/* Location Dropdown */}
           <div className="flex flex-col">
             <label className="font-semibold mb-1">Location</label>
-            <input
-              type="text"
+            <select
               name="location"
               value={form.location}
-              readOnly
-              placeholder="Location"
-              className="input-field border-blue-300 bg-gray-100 cursor-not-allowed"
-            />
+              onChange={handleChange}
+              className="input-field border-blue-300"
+            >
+              <option value="">Select Location</option>
+              {locations.map((loc) => (
+                <option key={loc} value={loc}>
+                  {loc}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Category */}

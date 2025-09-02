@@ -11,6 +11,7 @@ import {
   LogOut,
   ChevronRight,
   Menu,
+  ListChecks,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
@@ -30,16 +31,22 @@ const navigationItems = [
     icon: FolderKanban,
     badge: '',
   },
-  {
+  /*{
     title: 'Weekly Tracker',
     href: '/timesheet',
     icon: Clock,
     badge: '',
-  },
+  },*/
   {
     title: 'Ticket Tracker',
     href: '/reports',
     icon: BarChart3,
+    badge: null,
+  },
+  {
+    title: 'Task Tracker',
+    href: '/tasks',
+    icon: ListChecks,
     badge: null,
   },
   {

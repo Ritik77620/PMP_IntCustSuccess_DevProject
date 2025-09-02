@@ -12,6 +12,7 @@ import { Masters } from "@/pages/Masters";
 import { Profile } from "@/pages/Profile";
 import { Settings } from "@/pages/Settings";
 import NotFound from "./pages/NotFound";
+import TaskTracker from "./pages/TaskTracker";
 
 import ProjectDetails from "@/pages/ProjectDetails";
 
@@ -20,7 +21,7 @@ import { ProjectMaster } from "@/pages/masters/ProjectMaster";
 import { ClientMaster } from "@/pages/masters/ClientMaster";
 import { VendorMaster } from "@/pages/masters/VendorMaster";
 import MilestoneMaster from "./pages/masters/MilestoneMaster";
-import { UserMaster } from "@/pages/masters/UserMaster";
+import UserMaster from "@/pages/masters/UserMaster";
 import { TaskMaster } from "@/pages/masters/TaskMaster";
 import { useThemeStore } from "@/store/themeStore";
 import { useEffect } from "react";
@@ -48,6 +49,7 @@ const App = () => {
               <Route path="projects" element={<Projects />} />
               <Route path="timesheet" element={<WeeklyTracker />} />
               <Route path="reports" element={<TicketingSystem />} />
+              <Route path="tasks" element={<TaskTracker />} />
               <Route path="profile" element={<Profile />} />
               <Route path="settings" element={<Settings />} />
 

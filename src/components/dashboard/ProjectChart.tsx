@@ -17,7 +17,7 @@ export function ProjectChart() {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const res = await api.get("/api/projects");
+        const res = await api.get("http://103.160.106.200:7001/api/projects");
         setProjects(res.data);
       } catch (err) {
         console.error("Failed to fetch projects", err);

@@ -1,29 +1,16 @@
 "use client";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  Legend,
-} from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { Button } from "@/components/ui/button";
-import {
-  Users,
-  FolderKanban,
-  Clock,
-  TrendingUp,
-  AlertTriangle,
-  ArrowRight,
-} from "lucide-react";
+import { Users, FolderKanban, Clock, TrendingUp, AlertTriangle, ArrowRight } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import api from "@/lib/api";
+import { API_ENDPOINTS } from "@/config/apiConfig";
 
 export function Dashboard() {
   const [projects, setProjects] = useState<any[]>([]);
@@ -35,12 +22,11 @@ export function Dashboard() {
   const [loadingTasks, setLoadingTasks] = useState(true);
   const [loadingTimeEntries, setLoadingTimeEntries] = useState(true);
 
-  // Fetch data asynchronously
   useEffect(() => {
     const fetchProjects = async () => {
       setLoadingProjects(true);
       try {
-        const res = await api.get("http://localhost:7001/api/projects");
+        const res = await api.get(API_ENDPOINTS.projects);
         setProjects(res.data);
       } catch (e) {
         console.error("Failed to fetch projects", e);
@@ -52,7 +38,7 @@ export function Dashboard() {
     const fetchTickets = async () => {
       setLoadingTickets(true);
       try {
-        const res = await api.get("http://localhost:7001/api/tickets");
+        const res = await api.get(API_ENDPOINTS.tickets);
         setTickets(res.data);
       } catch (e) {
         console.error("Failed to fetch tickets", e);
@@ -64,7 +50,7 @@ export function Dashboard() {
     const fetchTasks = async () => {
       setLoadingTasks(true);
       try {
-        const res = await api.get("http://localhost:7001/api/tasks");
+        const res = await api.get(API_ENDPOINTS.tasks);
         setTasks(res.data);
       } catch (e) {
         console.error("Failed to fetch tasks", e);
@@ -76,7 +62,7 @@ export function Dashboard() {
     const fetchTimeEntries = async () => {
       setLoadingTimeEntries(true);
       try {
-        const res = await api.get("http://localhost:7001/api/timeentries");
+        const res = await api.get(API_ENDPOINTS.timeEntries);
         setTimeEntries(res.data);
       } catch (e) {
         console.error("Failed to fetch time entries", e);
@@ -91,7 +77,6 @@ export function Dashboard() {
     fetchTimeEntries();
   }, []);
 
-  // Compute project statistics
   const projectStats = {
     Running: projects.filter((p) => p.status === "Running").length,
     Completed: projects.filter((p) => p.status === "Completed").length,
@@ -99,7 +84,6 @@ export function Dashboard() {
     total: projects.length,
   };
 
-  // Compute ticket statistics
   const ticketStats = {
     Open: tickets.filter((t) => t.status === "Open").length,
     Closed: tickets.filter((t) => t.status === "Closed").length,
@@ -107,12 +91,11 @@ export function Dashboard() {
     total: tickets.length,
   };
 
-  // Prepare data for the pie charts
   const projectPieData = [
-  { name: "Running", value: projectStats.Running, color: "#FFB300" },      // amber/orange
-  { name: "Completed", value: projectStats.Completed, color: "#4CAF50" },  // green
-  { name: "Delayed", value: projectStats.Delayed, color: "#F44336" },      // red
-];
+    { name: "Running", value: projectStats.Running, color: "#FFB300" },
+    { name: "Completed", value: projectStats.Completed, color: "#4CAF50" },
+    { name: "Delayed", value: projectStats.Delayed, color: "#F44336" },
+  ];
 
   const ticketPieData = [
     { name: "Open", value: ticketStats.Open, color: "hsl(45, 100%, 51%)" },
@@ -120,7 +103,6 @@ export function Dashboard() {
     { name: "On Hold", value: ticketStats.Hold, color: "hsl(0, 80%, 60%)" },
   ];
 
-  // Filter current user's tasks and pending timesheets
   const myTasks = tasks.filter((t) => t.assigneeId === "2");
   const pendingTimesheets = timeEntries.filter((t) => t.approvalStatus === "pending").length;
 
@@ -135,13 +117,13 @@ export function Dashboard() {
       {/* Stats cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard title="Total Projects" value={loadingProjects ? "..." : projectStats.total} icon={FolderKanban} gradient />
-        <StatsCard title="Running Projects" value={loadingProjects ? "..." : projectStats.Running} icon={TrendingUp} change={{ value: "+5%", type: "increase" }} />
-        <StatsCard title="Completed Projects" value={loadingProjects ? "..." : projectStats.Completed} icon={FolderKanban} change={{ value: "+2%", type: "increase" }} />
-        <StatsCard title="Delayed Projects" value={loadingProjects ? "..." : projectStats.Delayed} icon={AlertTriangle} change={{ value: "-1%", type: "decrease" }} />
+        <StatsCard title="Running Projects" value={loadingProjects ? "..." : projectStats.Running} icon={TrendingUp} />
+        <StatsCard title="Completed Projects" value={loadingProjects ? "..." : projectStats.Completed} icon={FolderKanban} />
+        <StatsCard title="Delayed Projects" value={loadingProjects ? "..." : projectStats.Delayed} icon={AlertTriangle} />
         <StatsCard title="Total Tickets" value={loadingTickets ? "..." : ticketStats.total} icon={FolderKanban} gradient />
-        <StatsCard title="Open Tickets" value={loadingTickets ? "..." : ticketStats.Open} icon={Clock} change={{ value: "0%", type: "neutral" }} />
-        <StatsCard title="Closed Tickets" value={loadingTickets ? "..." : ticketStats.Closed} icon={TrendingUp} change={{ value: "+3%", type: "increase" }} />
-        <StatsCard title="On Hold Tickets" value={loadingTickets ? "..." : ticketStats.Hold} icon={Users} change={{ value: "0%", type: "neutral" }} />
+        <StatsCard title="Open Tickets" value={loadingTickets ? "..." : ticketStats.Open} icon={Clock} />
+        <StatsCard title="Closed Tickets" value={loadingTickets ? "..." : ticketStats.Closed} icon={TrendingUp} />
+        <StatsCard title="On Hold Tickets" value={loadingTickets ? "..." : ticketStats.Hold} icon={Users} />
       </div>
 
       {/* Pie charts */}
@@ -173,13 +155,7 @@ export function Dashboard() {
                   >
                     {projectPieData.map((entry, index) => (<Cell key={index} fill={entry.color} />))}
                   </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "var(--radius)",
-                    }}
-                  />
+                  <Tooltip />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
@@ -223,7 +199,7 @@ export function Dashboard() {
       </div>
 
       {/* Tasks and Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader className="flex justify-between items-center">
             <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5" />My Tasks</CardTitle>
@@ -264,7 +240,7 @@ export function Dashboard() {
         </Card>
 
         <RecentActivity />
-      </div>
+      </div>*/}
     </div>
   );
 }

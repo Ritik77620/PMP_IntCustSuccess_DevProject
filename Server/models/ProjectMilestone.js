@@ -10,7 +10,8 @@ const projectMilestoneSchema = new Schema({
   actualStartDate: { type: Date },
   actualCloseDate: { type: Date },
   responsibility: { type: String },
+  status: { type: String, enum: ["Open", "In Progress", "Closed"], default: "Open" }, // ✅ Added status
   remark: { type: String },
 });
 
-export default model("ProjectMilestone", projectMilestoneSchema); // default export
+export default model("ProjectMilestone", projectMilestoneSchema);

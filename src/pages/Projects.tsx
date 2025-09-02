@@ -5,7 +5,6 @@ import { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DropdownMenu,
@@ -14,16 +13,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Plus, MoreHorizontal, Eye, Edit, Trash2 } from "lucide-react";
-import api from "@/lib/api";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { API_ENDPOINTS } from "@/config/apiConfig";
+import api from "@/lib/api";
 
 type Status = "Running" | "Completed" | "Delayed";
 
@@ -94,6 +88,7 @@ export function Projects() {
     progress: 0,
   });
 
+  // Progress recalculation when milestone changes
   useEffect(() => {
     if (formData.milestone) {
       const newProgress = calculateProgress(formData.milestone);
@@ -103,10 +98,11 @@ export function Projects() {
     }
   }, [formData.milestone, milestones]);
 
+  // Fetch Data
   const fetchProjects = async () => {
     setLoading(true);
     try {
-      const res = await api.get("http://localhost:7001/api/projects");
+      const res = await api.get(API_ENDPOINTS.projects);
       setProjects(res.data);
     } catch (err) {
       console.error(err);
@@ -117,7 +113,7 @@ export function Projects() {
 
   const fetchClients = async () => {
     try {
-      const res = await api.get("http://localhost:7001/api/clients");
+      const res = await api.get(API_ENDPOINTS.clients);
       setClients(res.data);
     } catch (err) {
       console.error(err);
@@ -126,7 +122,7 @@ export function Projects() {
 
   const fetchMilestones = async () => {
     try {
-      const res = await api.get("http://localhost:7001/api/milestones");
+      const res = await api.get(API_ENDPOINTS.milestones);
       setMilestones(res.data);
     } catch (err) {
       console.error(err);
@@ -135,7 +131,7 @@ export function Projects() {
 
   const fetchMasterProjects = async () => {
     try {
-      const res = await api.get("http://localhost:7001/api/masterprojects");
+      const res = await api.get(API_ENDPOINTS.masterProjects);
       setMasterProjects(res.data);
     } catch (err) {
       console.error(err);
@@ -193,15 +189,8 @@ export function Projects() {
 
   const handleSubmit = async () => {
     try {
-      if (
-        !formData.projectCode ||
-        !formData.name ||
-        !formData.client ||
-        !formData.milestone ||
-        !formData.planStart ||
-        !formData.planClose
-      ) {
-        alert("Please fill in required fields: Project Code, Project, Client, Milestone, Plan Start, Plan Close.");
+      if (!formData.projectCode || !formData.name || !formData.client || !formData.milestone || !formData.planStart) {
+        alert("Please fill in required fields: Project Code, Project, Client, Milestone, Plan Start.");
         return;
       }
       if (projects.some((p) => p.projectCode === formData.projectCode && p._id !== editingId)) {
@@ -209,9 +198,9 @@ export function Projects() {
         return;
       }
       if (editingId) {
-        await api.put(`http://localhost:7001/api/projects/${editingId}`, formData);
+        await api.put(API_ENDPOINTS.projectById(editingId), formData);
       } else {
-        await api.post("http://localhost:7001/api/projects", formData);
+        await api.post(API_ENDPOINTS.projects, formData);
       }
       resetForm();
       setEditingId(null);
@@ -269,7 +258,7 @@ export function Projects() {
   const handleDelete = async (id: string) => {
     if (!window.confirm("Are you sure you want to delete this project?")) return;
     try {
-      await api.delete(`http://localhost:7001/api/projects/${id}`);
+      await api.delete(API_ENDPOINTS.projectById(id));
       fetchProjects();
     } catch (err) {
       console.error(err);
@@ -304,10 +293,7 @@ export function Projects() {
         const projectId = row.original._id;
         const projectName = getValue<string>();
         return (
-          <Link
-            to={`/projects/${projectId}`}
-            className="text-black hover:text-blue-600 hover:underline transition-colors duration-200"
-          >
+          <Link to={`/projects/${projectId}`} className="text-black hover:text-blue-600 hover:underline">
             {projectName}
           </Link>
         );
@@ -331,7 +317,6 @@ export function Projects() {
         return <Badge variant={statusColors[status]}>{status}</Badge>;
       },
     },
-    
     {
       id: "actions",
       header: "",
@@ -453,31 +438,44 @@ export function Projects() {
             {/* Plan Start */}
             <div className="flex flex-col">
               <Label htmlFor="planStart" className="mb-2 font-semibold text-sm">Plan Start Date</Label>
-              <Input id="planStart" type="date" name="planStart" value={formData.planStart} onChange={handleChange} className="w-full" />
+              <Input
+                id="planStart"
+                type="date"
+                name="planStart"
+                value={formData.planStart}
+                onChange={handleChange}
+                className="w-full"
+                readOnly={!!editingId} // read-only if editing
+              />
             </div>
 
             {/* Plan Close */}
             <div className="flex flex-col">
               <Label htmlFor="planClose" className="mb-2 font-semibold text-sm">Plan Close Date</Label>
-              <Input id="planClose" type="date" name="planClose" value={formData.planClose} onChange={handleChange} className="w-full" />
+              <Input
+                id="planClose"
+                type="date"
+                name="planClose"
+                value={formData.planClose}
+                onChange={handleChange}
+                className="w-full"
+                readOnly={!!editingId} // read-only if editing
+              />
             </div>
 
             {/* Extra fields only for edit */}
             {editingId && (
               <>
-                {/* Actual Start */}
                 <div className="flex flex-col">
                   <Label htmlFor="actualStart" className="mb-2 font-semibold text-sm">Actual Start Date</Label>
                   <Input id="actualStart" type="date" name="actualStart" value={formData.actualStart} onChange={handleChange} className="w-full" />
                 </div>
 
-                {/* Actual Close */}
                 <div className="flex flex-col">
                   <Label htmlFor="actualClose" className="mb-2 font-semibold text-sm">Actual Close Date</Label>
                   <Input id="actualClose" type="date" name="actualClose" value={formData.actualClose} onChange={handleChange} className="w-full" />
                 </div>
 
-                {/* Status */}
                 <div className="flex flex-col">
                   <Label htmlFor="status" className="mb-2 font-semibold text-sm">Status</Label>
                   <select id="status" name="status" value={formData.status} onChange={handleChange} className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm w-full">

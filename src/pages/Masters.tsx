@@ -38,12 +38,6 @@ export function Masters() {
       description: 'Manage user roles, access, and credentials',
       icon: Users,
       route: '/masters/user',
-    },
-    {
-      title: 'Task Master',
-      description: 'Manage task roles, access, and credentials',
-      icon: Clipboard,  
-      route: '/masters/task',
     }
   ];
 

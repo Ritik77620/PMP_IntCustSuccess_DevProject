@@ -15,9 +15,13 @@ export const getMilestones = async (req, res, next) => {
       : {};
 
     const skip = (Number(page) - 1) * Number(limit);
+
     const [items, total] = await Promise.all([
-      Milestone.find(q).sort({ sequence: 1, createdAt: -1 }).skip(skip).limit(Number(limit)),
-      Milestone.countDocuments(q)
+      Milestone.find(q)
+        .sort({ weightage: 1, createdAt: -1 })
+        .skip(skip)
+        .limit(Number(limit)),
+      Milestone.countDocuments(q),
     ]);
 
     res.json({
@@ -26,8 +30,8 @@ export const getMilestones = async (req, res, next) => {
         total,
         page: Number(page),
         pages: Math.ceil(total / Number(limit)),
-        limit: Number(limit)
-      }
+        limit: Number(limit),
+      },
     });
   } catch (err) {
     next(err);
@@ -36,17 +40,17 @@ export const getMilestones = async (req, res, next) => {
 
 /**
  * POST /api/milestones
- * Body: { name: string, sequence: number }
+ * Body: { name: string, weightage: number }
  */
 export const createMilestone = async (req, res, next) => {
   try {
-    const { name, sequence } = req.body;
+    const { name, weightage } = req.body;
 
-    if (!name || sequence === undefined || sequence === null) {
-      return res.status(400).json({ message: "name and sequence are required" });
+    if (!name || weightage === undefined || weightage === null) {
+      return res.status(400).json({ message: "name and weightage are required" });
     }
 
-    const milestone = await Milestone.create({ name, sequence });
+    const milestone = await Milestone.create({ name, weightage });
     res.status(201).json(milestone);
   } catch (err) {
     next(err);
@@ -55,7 +59,7 @@ export const createMilestone = async (req, res, next) => {
 
 /**
  * PUT /api/milestones/:id
- * Body: partial { name?, sequence? }
+ * Body: partial { name?, weightage? }
  */
 export const updateMilestone = async (req, res, next) => {
   try {
@@ -64,7 +68,7 @@ export const updateMilestone = async (req, res, next) => {
     if (!milestone) return res.status(404).json({ message: "Milestone not found" });
 
     if (req.body.name !== undefined) milestone.name = req.body.name;
-    if (req.body.sequence !== undefined) milestone.sequence = req.body.sequence;
+    if (req.body.weightage !== undefined) milestone.weightage = req.body.weightage;
 
     const updated = await milestone.save();
     res.json(updated);

@@ -65,8 +65,8 @@ export function Header() {
               <Sun className="h-4 w-4" />
             )}
           </Button>
-
-          {/* Notifications */}
+          
+          {/* Notifications 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="relative transition-smooth">
@@ -75,7 +75,7 @@ export function Header() {
                   variant="destructive" 
                   className="absolute -top-1 -right-1 h-5 w-5 text-xs p-0 flex items-center justify-center"
                 >
-                  3
+                  
                 </Badge>
               </Button>
             </DropdownMenuTrigger>
@@ -97,8 +97,8 @@ export function Header() {
                 </div>
               </div>
             </DropdownMenuContent>
-          </DropdownMenu>
-
+          </DropdownMenu>*/}
+          
           {/* User Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

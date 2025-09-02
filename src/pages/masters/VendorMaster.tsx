@@ -1,9 +1,11 @@
+"use client";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import api from "@/lib/api";
+import { API_ENDPOINTS } from "@/config/apiConfig";
 
 interface Vendor {
   id: string;
@@ -31,8 +33,11 @@ export function VendorMaster() {
 
   const fetchVendors = async () => {
     try {
-      const res = await api.get("http://103.160.106.200:7001/api/vendors");
-      setVendors(res.data);
+      const res = await api.get(API_ENDPOINTS.vendors);
+      const sorted = res.data.sort((a: Vendor, b: Vendor) =>
+        a.vendorName.localeCompare(b.vendorName)
+      );
+      setVendors(sorted);
     } catch (err) {
       console.error("Failed to fetch vendors", err);
     }
@@ -56,9 +61,9 @@ export function VendorMaster() {
         spoc: form.spoc,
       };
       if (form.id) {
-        await api.put(`http://103.160.106.200:7001/api/vendors/${form.id}`, payload);
+        await api.put(API_ENDPOINTS.vendorById(form.id), payload);
       } else {
-        await api.post("http://103.160.106.200:7001/api/vendors", payload);
+        await api.post(API_ENDPOINTS.vendors, payload);
       }
       await fetchVendors();
       setForm({ vendorName: "", vendorLocation: "", vendorGst: "", email: "", spoc: "" });
@@ -81,7 +86,7 @@ export function VendorMaster() {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this vendor?")) return;
     try {
-      await api.delete(`http://103.160.106.200:7001/api/vendors/${id}`);
+      await api.delete(API_ENDPOINTS.vendorById(id));
       fetchVendors();
     } catch (err) {
       console.error("Failed to delete vendor", err);
