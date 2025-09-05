@@ -190,3 +190,7 @@ All colors MUST be HSL.
     @apply backdrop-blur-md bg-black/10 border border-white/10;
   }
 }
+
+table td, table th {
+  min-width: 110px;
+}

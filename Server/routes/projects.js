@@ -29,11 +29,18 @@ router.post("/", async (req, res) => {
   try {
     const data = req.body;
 
+    // ✅ ensure required fields
+    if (!data.project || !data.projectCode || !data.name || !data.client || !data.milestone || !data.planStart) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
     // Calculate gapInDays if both actualStart and actualClose exist
     if (data.actualStart && data.actualClose) {
       const start = new Date(data.actualStart);
       const close = new Date(data.actualClose);
-      data.gapInDays = Math.ceil((close.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+      data.gapInDays = Math.ceil(
+        (close.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
+      );
     }
 
     const project = new Project(data);
@@ -53,7 +60,9 @@ router.put("/:id", async (req, res) => {
     if (data.actualStart && data.actualClose) {
       const start = new Date(data.actualStart);
       const close = new Date(data.actualClose);
-      data.gapInDays = Math.ceil((close.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+      data.gapInDays = Math.ceil(
+        (close.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
+      );
     }
 
     const project = await Project.findByIdAndUpdate(req.params.id, data, { new: true });

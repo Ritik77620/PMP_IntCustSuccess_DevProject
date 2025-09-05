@@ -18,8 +18,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { API_ENDPOINTS } from "@/config/apiConfig";
 import api from "@/lib/api";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 
-type Status = "Running" | "Completed" | "Delayed";
+type Status = "Running" | "Completed" | "Delayed" | "On Hold";
+
 
 interface Milestone {
   _id: string;
@@ -29,9 +36,12 @@ interface Milestone {
 
 interface Project {
   _id: string;
+  project: string;
   projectCode: string;
   name: string;
   client: string;
+  clientLocation: string;   // ✅ new
+  unit: string;             // ✅ new
   milestone: string;
   planStart: string;
   planClose: string;
@@ -43,13 +53,24 @@ interface Project {
   progress: number;
 }
 
+interface Unit {
+  _id: string;
+  unitName: string;
+}
+
+interface Location {
+  _id: string;
+  locationName: string;
+  spoc?: string;
+  units: Unit[];
+}
+
 interface Client {
-  id: string;
+  _id: string;
   clientName: string;
-  clientLocation: string;
-  gst: string;
+  gst?: string;
   email: string;
-  spoc: string;
+  locations: Location[];
 }
 
 interface MasterProject {
@@ -67,16 +88,21 @@ const statusColors = {
 
 export function Projects() {
   const [projects, setProjects] = useState<Project[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
+  const [clients, setClients] = useState<any[]>([]);
+  const [clientLocations, setClientLocations] = useState<{ _id: string; name: string }[]>([]);
+  const [units, setUnits] = useState<{ _id: string; name: string }[]>([]);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [masterProjects, setMasterProjects] = useState<MasterProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Omit<Project, "_id">>({
+    project: "",
     projectCode: "",
     name: "",
     client: "",
+    clientLocation: "",   // ✅
+    unit: "",             // ✅
     milestone: "",
     planStart: "",
     planClose: "",
@@ -87,7 +113,31 @@ export function Projects() {
     remark: "",
     progress: 0,
   });
+  useEffect(() => {
+    const fetchMasters = async () => {
+      try {
+        const [projectsRes, clientsRes, milestonesRes] = await Promise.all([
+          fetch(API_ENDPOINTS.masterProjects),
+          fetch(API_ENDPOINTS.clients),
+          fetch(API_ENDPOINTS.milestones),
+        ]);
 
+        const [projectsData, clientsData, milestonesData] = await Promise.all([
+          projectsRes.json(),
+          clientsRes.json(),
+          milestonesRes.json(),
+        ]);
+
+        setMasterProjects(projectsData);
+        setClients(clientsData);
+        setMilestones(milestonesData);
+      } catch (error) {
+        console.error("Error fetching master data:", error);
+      }
+    };
+
+    fetchMasters();
+  }, []);
   // Progress recalculation when milestone changes
   useEffect(() => {
     if (formData.milestone) {
@@ -172,9 +222,12 @@ export function Projects() {
 
   const resetForm = () => {
     setFormData({
+      project: "",
       projectCode: "",
       name: "",
       client: "",
+      clientLocation: "",   // ✅
+      unit: "",             // ✅
       milestone: "",
       planStart: "",
       planClose: "",
@@ -189,8 +242,8 @@ export function Projects() {
 
   const handleSubmit = async () => {
     try {
-      if (!formData.projectCode || !formData.name || !formData.client || !formData.milestone || !formData.planStart) {
-        alert("Please fill in required fields: Project Code, Project, Client, Milestone, Plan Start.");
+      if (!formData.project || !formData.projectCode || !formData.name || !formData.client || !formData.milestone || !formData.planStart || !formData.planClose) {
+        alert("Please fill in required fields: Project, Project Code, Project Type, Client, Milestone, Plan Start, Plan Close.");
         return;
       }
       if (projects.some((p) => p.projectCode === formData.projectCode && p._id !== editingId)) {
@@ -219,7 +272,7 @@ export function Projects() {
     alert(
       [
         `Project Code: ${project.projectCode}`,
-        `Project: ${project.name}`,
+        `Project Type: ${project.name}`,
         `Client: ${clientName}`,
         `Milestone: ${milestoneName}`,
         `Plan Start: ${fmt(project.planStart)}`,
@@ -235,12 +288,18 @@ export function Projects() {
   };
 
   const handleEdit = (project: Project) => {
-    const toDateInput = (iso?: string) => (iso ? new Date(iso).toISOString().split("T")[0] : "");
+    const toDateInput = (iso?: string) =>
+      iso ? new Date(iso).toISOString().split("T")[0] : "";
+
     const progress = calculateProgress(project.milestone);
+
     setFormData({
+      project: project.project,
       projectCode: project.projectCode,
       name: project.name,
       client: project.client,
+      clientLocation: project.clientLocation || "",   // ✅
+      unit: project.unit || "",                       // ✅
       milestone: project.milestone,
       planStart: toDateInput(project.planStart),
       planClose: toDateInput(project.planClose),
@@ -271,6 +330,7 @@ export function Projects() {
     Running: projects.filter((p) => p.status === "Running").length,
     Completed: projects.filter((p) => p.status === "Completed").length,
     Delayed: projects.filter((p) => p.status === "Delayed").length,
+    OnHold: projects.filter((p) => p.status === "On Hold").length,
   };
 
   const fmtDateCell = (value: unknown) => {
@@ -287,19 +347,28 @@ export function Projects() {
   const columns: ColumnDef<Project>[] = [
     { accessorKey: "projectCode", header: "PROJECT CODE" },
     {
-      accessorKey: "name",
+      accessorKey: "project",
       header: "PROJECT",
       cell: ({ row, getValue }) => {
         const projectId = row.original._id;
-        const projectName = getValue<string>();
+        const projectTitle = getValue<string>();
         return (
-          <Link to={`/projects/${projectId}`} className="text-black hover:text-blue-600 hover:underline">
-            {projectName}
+          <Link
+            to={`/projects/${projectId}`}
+            className="text-black hover:text-blue-600 hover:underline"
+          >
+            {projectTitle}
           </Link>
         );
       },
     },
-    { accessorKey: "client", header: "CLIENT", cell: ({ row }) => row.getValue("client") },
+    {
+      accessorKey: "name",
+      header: "PROJECT TYPE",
+    },
+    { accessorKey: "client", header: "CLIENT" },
+    { accessorKey: "clientLocation", header: "CLIENT LOCATION" },
+    { accessorKey: "unit", header: "UNIT" },
     {
       accessorKey: "milestone",
       header: "MILESTONE",
@@ -331,10 +400,11 @@ export function Projects() {
             <DropdownMenuItem onClick={() => handleView(row.original)}>
               <Eye className="mr-2 h-4 w-4" /> View
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleEdit(row.original)}>
-              <Edit className="mr-2 h-4 w-4" /> Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleDelete(row.original._id)} className="text-destructive">
+            {/* ❌ Removed Edit option */}
+            <DropdownMenuItem
+              onClick={() => handleDelete(row.original._id)}
+              className="text-destructive"
+            >
               <Trash2 className="mr-2 h-4 w-4" /> Delete
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -357,14 +427,18 @@ export function Projects() {
       </motion.div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {["total", "Running", "Completed", "Delayed"].map((key) => {
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        {["total", "Running", "Completed", "Delayed", "OnHold"].map((key) => {
           let bgColor = "", progressColor = "";
           switch (key) {
             case "total": bgColor = "bg-blue-100 text-blue-800"; progressColor = "bg-blue-600"; break;
             case "Running": bgColor = "bg-yellow-100 text-yellow-800"; progressColor = "bg-yellow-600"; break;
             case "Completed": bgColor = "bg-green-100 text-green-800"; progressColor = "bg-green-600"; break;
             case "Delayed": bgColor = "bg-red-100 text-red-800"; progressColor = "bg-red-600"; break;
+            case "OnHold":
+              bgColor = "bg-purple-100 text-purple-800";
+              progressColor = "bg-purple-600";
+              break;
             default: bgColor = "bg-gray-100 text-gray-800"; progressColor = "bg-gray-600";
           }
           const value = stats[key as keyof typeof stats] || 0;
@@ -386,12 +460,59 @@ export function Projects() {
         })}
       </div>
 
-      {/* Projects Table */}
+      {/* Projects Table with Tabs */}
       <Card>
         <CardHeader>
-          <CardTitle>ALL PROJECTS</CardTitle>
+          <CardTitle>PROJECTS</CardTitle>
         </CardHeader>
-        <CardContent>{loading ? <p>Loading...</p> : <DataTable columns={columns} data={projects} />}</CardContent>
+        <CardContent>
+          {loading ? (
+            <p>Loading...</p>
+          ) : (
+            <Tabs defaultValue="all" className="w-full">
+              <TabsList className="grid grid-cols-6 gap-2">
+                <TabsTrigger value="all">All</TabsTrigger>
+                <TabsTrigger value="projectDelayed">Project Delayed</TabsTrigger>
+                <TabsTrigger value="milestoneDelayed">Milestone Delayed</TabsTrigger>
+                <TabsTrigger value="onHold">On Hold</TabsTrigger>
+                <TabsTrigger value="running">Running</TabsTrigger>
+                <TabsTrigger value="completed">Completed</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="all">
+                <DataTable columns={columns} data={projects} />
+              </TabsContent>
+
+              <TabsContent value="projectDelayed">
+                <DataTable columns={columns} data={projects.filter((p) => p.status === "Delayed")} />
+              </TabsContent>
+
+              <TabsContent value="milestoneDelayed">
+                <DataTable
+                  columns={columns}
+                  data={projects.filter(
+                    (p) =>
+                      p.milestone &&
+                      p.status !== "Completed" &&
+                      new Date(p.planClose) < new Date()
+                  )}
+                />
+              </TabsContent>
+
+              <TabsContent value="onHold">
+                <DataTable columns={columns} data={projects.filter((p) => p.status === "On Hold")} />
+              </TabsContent>
+
+              <TabsContent value="running">
+                <DataTable columns={columns} data={projects.filter((p) => p.status === "Running")} />
+              </TabsContent>
+
+              <TabsContent value="completed">
+                <DataTable columns={columns} data={projects.filter((p) => p.status === "Completed")} />
+              </TabsContent>
+            </Tabs>
+          )}
+        </CardContent>
       </Card>
 
       {/* Dialog */}
@@ -404,40 +525,167 @@ export function Projects() {
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {/* Project Code */}
             <div className="flex flex-col">
-              <Label htmlFor="projectCode" className="mb-2 font-semibold text-sm">Project Code</Label>
-              <Input id="projectCode" type="text" name="projectCode" value={formData.projectCode} onChange={handleChange} readOnly={!!editingId} className="w-full" />
+              <Label htmlFor="projectCode" className="mb-2 font-semibold text-sm">
+                Project Code
+              </Label>
+              <Input
+                id="projectCode"
+                type="text"
+                name="projectCode"
+                value={formData.projectCode}
+                onChange={handleChange}
+                readOnly={!!editingId}
+                className="w-full"
+              />
             </div>
 
-            {/* Project Name */}
+            {/* Project */}
             <div className="flex flex-col">
-              <Label htmlFor="projectName" className="mb-2 font-semibold text-sm">Project</Label>
-              <select id="projectName" name="projectName" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} disabled={!!editingId} className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm w-full">
-                <option value="">Select Project</option>
-                {masterProjects.map((p) => <option key={p._id} value={p.projectName}>{p.projectName}</option>)}
+              <Label htmlFor="project" className="mb-2 font-semibold text-sm">
+                Project
+              </Label>
+              <Input
+                id="project"
+                type="text"
+                name="project"
+                value={formData.project}
+                onChange={handleChange}
+                required
+                className="w-full"
+              />
+            </div>
+
+            {/* Project Type */}
+            <div className="flex flex-col">
+              <Label htmlFor="projectName" className="mb-2 font-semibold text-sm">
+                Project Type
+              </Label>
+              <select
+                id="projectName"
+                name="projectName"
+                value={formData.name}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
+                className="border rounded px-3 py-2"
+              >
+                <option value="">Select Project Type</option>
+                {masterProjects.map((mp) => (
+                  <option key={mp._id} value={mp.projectName}>
+                    {mp.projectName}
+                  </option>
+                ))}
               </select>
             </div>
 
             {/* Client */}
             <div className="flex flex-col">
-              <Label htmlFor="client" className="mb-2 font-semibold text-sm">Client</Label>
-              <select id="client" name="client" value={formData.client} onChange={handleChange} disabled={!!editingId} className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm w-full">
+              <Label htmlFor="client" className="mb-2 font-semibold text-sm">
+                Client
+              </Label>
+              <select
+                id="client"
+                name="client"
+                value={formData.client}
+                onChange={(e) => {
+                  const selectedClient = clients.find(
+                    (c) => c.clientName === e.target.value
+                  );
+                  setFormData({
+                    ...formData,
+                    client: selectedClient?.clientName || "",
+                    clientLocation: "",
+                    unit: "",
+                  });
+                }}
+                className="border rounded px-3 py-2"
+              >
                 <option value="">Select Client</option>
-                {clients.map((c) => <option key={c.id} value={c.clientName}>{c.clientName}</option>)}
+                {clients.map((c) => (
+                  <option key={c._id} value={c.clientName}>
+                    {c.clientName}
+                  </option>
+                ))}
               </select>
             </div>
 
+            {/* Location */}
+            <div className="flex flex-col">
+              <Label htmlFor="clientLocation" className="mb-2 font-semibold text-sm">
+                Location
+              </Label>
+              <select
+                id="clientLocation"
+                name="clientLocation"
+                value={formData.clientLocation}
+                onChange={(e) =>
+                  setFormData({ ...formData, clientLocation: e.target.value, unit: "" })
+                }
+                disabled={!formData.client}
+                className="border rounded px-3 py-2"
+              >
+                <option value="">Select Location</option>
+                {clients
+                  .find((c) => c.clientName === formData.client)
+                  ?.locations.map((loc) => (
+                    <option key={loc._id} value={loc.locationName}>
+                      {loc.locationName}
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            {/* Unit */}
+            <div className="flex flex-col">
+              <Label htmlFor="unit" className="mb-2 font-semibold text-sm">
+                Unit
+              </Label>
+              <select
+                id="unit"
+                name="unit"
+                value={formData.unit}
+                onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                disabled={!formData.clientLocation}
+                className="border rounded px-3 py-2"
+              >
+                <option value="">Select Unit</option>
+                {clients
+                  .find((c) => c.clientName === formData.client)
+                  ?.locations.find((l) => l.locationName === formData.clientLocation)
+                  ?.units.map((u) => (
+                    <option key={u._id} value={u.unitName}>
+                      {u.unitName}
+                    </option>
+                  ))}
+              </select>
+
+            </div>
+            {/* Milestone */}
             {/* Milestone */}
             <div className="flex flex-col">
-              <Label htmlFor="milestone" className="mb-2 font-semibold text-sm">Milestone</Label>
-              <select id="milestone" name="milestone" value={formData.milestone} onChange={handleChange} className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm w-full">
+              <Label htmlFor="milestone" className="mb-2 font-semibold text-sm">
+                Milestone
+              </Label>
+              <select
+                id="milestone"
+                name="milestone"
+                value={formData.milestone}
+                onChange={handleChange}
+                className="border rounded px-3 py-2"
+              >
                 <option value="">Select Milestone</option>
-                {milestones.map((m) => <option key={m._id} value={m._id}>{m.name}</option>)}
+                {milestones.map((m) => (
+                  <option key={m._id} value={m._id}>
+                    {m.name}
+                  </option>
+                ))}
               </select>
             </div>
-
             {/* Plan Start */}
             <div className="flex flex-col">
-              <Label htmlFor="planStart" className="mb-2 font-semibold text-sm">Plan Start Date</Label>
+              <Label htmlFor="planStart" className="mb-2 font-semibold text-sm">
+                Plan Start
+              </Label>
               <Input
                 id="planStart"
                 type="date"
@@ -445,13 +693,14 @@ export function Projects() {
                 value={formData.planStart}
                 onChange={handleChange}
                 className="w-full"
-                readOnly={!!editingId} // read-only if editing
               />
             </div>
 
             {/* Plan Close */}
             <div className="flex flex-col">
-              <Label htmlFor="planClose" className="mb-2 font-semibold text-sm">Plan Close Date</Label>
+              <Label htmlFor="planClose" className="mb-2 font-semibold text-sm">
+                Plan Close
+              </Label>
               <Input
                 id="planClose"
                 type="date"
@@ -459,40 +708,21 @@ export function Projects() {
                 value={formData.planClose}
                 onChange={handleChange}
                 className="w-full"
-                readOnly={!!editingId} // read-only if editing
               />
             </div>
-
-            {/* Extra fields only for edit */}
-            {editingId && (
-              <>
-                <div className="flex flex-col">
-                  <Label htmlFor="actualStart" className="mb-2 font-semibold text-sm">Actual Start Date</Label>
-                  <Input id="actualStart" type="date" name="actualStart" value={formData.actualStart} onChange={handleChange} className="w-full" />
-                </div>
-
-                <div className="flex flex-col">
-                  <Label htmlFor="actualClose" className="mb-2 font-semibold text-sm">Actual Close Date</Label>
-                  <Input id="actualClose" type="date" name="actualClose" value={formData.actualClose} onChange={handleChange} className="w-full" />
-                </div>
-
-                <div className="flex flex-col">
-                  <Label htmlFor="status" className="mb-2 font-semibold text-sm">Status</Label>
-                  <select id="status" name="status" value={formData.status} onChange={handleChange} className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm w-full">
-                    <option value="Running">Running</option>
-                    <option value="Completed">Completed</option>
-                    <option value="Delayed">Delayed</option>
-                  </select>
-                </div>
-              </>
-            )}
           </div>
 
           <DialogFooter>
-            <Button onClick={handleSubmit}>{editingId ? "Update" : "Create"}</Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={!editingId && milestones.length === 0} // ❌ disable until milestones exist
+            >
+              {editingId ? "Update" : "Create"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </div>
   );
 }
