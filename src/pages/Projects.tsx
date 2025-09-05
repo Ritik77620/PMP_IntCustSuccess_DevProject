@@ -195,6 +195,16 @@ export function Projects() {
     fetchMasterProjects();
   }, []);
 
+const updateStatus = (planClose?: string, actualClose?: string): Status => {
+  const today = new Date();
+  const plan = planClose ? new Date(planClose) : null;
+  const actual = actualClose ? new Date(actualClose) : null;
+
+  if (plan && !actual && plan < today) return "Delayed";
+  if (actual) return "Completed";
+  return "Running";
+};
+
   const calculateProgress = (selectedMilestoneId: string) => {
     if (!milestones.length) return 0;
     const sorted = [...milestones].sort((a, b) => a.sequence - b.sequence);
@@ -205,20 +215,30 @@ export function Projects() {
     return totalSequence > 0 ? Math.round((sumSelected / totalSequence) * 100) : 0;
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    if (name === "milestone") {
-      const progress = calculateProgress(value);
-      setFormData((s) => ({ ...s, milestone: value, progress }));
-    } else if (name === "progress") {
-      const num = Number(value);
-      setFormData((s) => ({ ...s, progress: isNaN(num) ? 0 : Math.min(100, Math.max(0, num)) }));
-    } else if (name === "status") {
-      setFormData((s) => ({ ...s, status: value as Status }));
-    } else {
-      setFormData((s) => ({ ...s, [name]: value }));
+ const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const { name, value } = e.target;
+  setFormData((prev) => {
+    let updated = { ...prev, [name]: value };
+
+    // Auto update status if planClose or actualClose changes
+    if (name === "planClose" || name === "actualClose") {
+      updated.status = updateStatus(updated.planClose, updated.actualClose);
     }
-  };
+
+    // Handle milestone change
+    if (name === "milestone") {
+      updated.progress = calculateProgress(value);
+    }
+
+    // Ensure progress stays valid
+    if (name === "progress") {
+      const num = Number(value);
+      updated.progress = isNaN(num) ? 0 : Math.min(100, Math.max(0, num));
+    }
+
+    return updated;
+  });
+};
  const calculateElapsedDays = (planClose?: string) => {
   if (!planClose) return "-";
 
