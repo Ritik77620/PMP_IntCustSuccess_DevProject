@@ -7,6 +7,8 @@ interface Project {
     code: string;
     name: string;
     clientName: string;
+    planStartDate?: string; // new field
+    planCloseDate?: string; // new field
 }
 
 interface Milestone {
@@ -24,6 +26,7 @@ interface Milestone {
 export default function ProjectDetails() {
     const { projectId } = useParams<{ projectId: string }>();
     const [project, setProject] = useState<Project>({ code: "", name: "", clientName: "" });
+    const [errors, setErrors] = useState<{ [key: string]: string }>({});
     const [milestones, setMilestones] = useState<Milestone[]>([]);
     const [milestone, setMilestone] = useState<Milestone>({
         name: "",
@@ -75,24 +78,45 @@ export default function ProjectDetails() {
     };
 
     const handleSave = async () => {
+        const { name, planStartDate, planCloseDate, responsibility, status } = milestone;
+        const newErrors: { [key: string]: string } = {};
+
+        // Trim strings
+        if (!name.trim()) newErrors.name = "Milestone name is required";
+        if (!planStartDate) newErrors.planStartDate = "Plan Start Date is required";
+        if (!planCloseDate) newErrors.planCloseDate = "Plan Close Date is required";
+        if (!responsibility.trim()) newErrors.responsibility = "Responsibility is required";
+        if (!status) newErrors.status = "Status is required";
+
+        const projectStart = new Date(project.planStartDate || "");
+        const projectEnd = new Date(project.planCloseDate || "");
+        const milestoneStart = new Date(planStartDate);
+        const milestoneEnd = new Date(planCloseDate);
+
+        if (planStartDate && milestoneStart < projectStart)
+            newErrors.planStartDate = "Plan Start Date cannot be before Project Start Date";
+        if (planCloseDate && milestoneEnd > projectEnd)
+            newErrors.planCloseDate = "Plan Close Date cannot be after Project Close Date";
+        if (planStartDate && planCloseDate && milestoneEnd < milestoneStart)
+            newErrors.planCloseDate = "Plan Close Date cannot be before Plan Start Date";
+
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
+            return;
+        }
+
+        setErrors({}); // clear errors
+
         try {
             if (editingId) {
-                await axios.put(
-                    API_ENDPOINTS.projectMilestoneById(projectId!, editingId),
-                    milestone
-                );
+                await axios.put(API_ENDPOINTS.projectMilestoneById(projectId!, editingId), milestone);
                 setMilestones(
                     milestones.map((m) => (m._id === editingId ? { ...milestone, _id: editingId } : m))
                 );
                 setEditingId(null);
-                alert("Milestone updated successfully!");
             } else {
-                const res = await axios.post(
-                    API_ENDPOINTS.projectMilestones(projectId!),
-                    milestone
-                );
+                const res = await axios.post(API_ENDPOINTS.projectMilestones(projectId!), milestone);
                 setMilestones([...milestones, res.data]);
-                alert("Milestone saved successfully!");
             }
 
             setMilestone({
@@ -106,10 +130,13 @@ export default function ProjectDetails() {
                 status: "Open",
             });
             setShowForm(false);
-        } catch (err) {
+        } catch (err: any) {
             console.error("Failed to save milestone:", err);
+            alert("Failed to save milestone. Check console for details.");
         }
     };
+
+
 
     const handleEdit = (m: Milestone) => {
         setMilestone(m);
@@ -134,20 +161,31 @@ export default function ProjectDetails() {
         <div className="p-6">
             {/* Project Header */}
             <div className="mb-6 p-6 rounded-lg shadow-lg bg-gradient-to-r from-blue-50 to-blue-100 border-l-4 border-blue-500">
-                <h2 className="text-2xl font-bold text-blue-700 mb-2">Project Details</h2>
-                <div className="flex justify-between text-gray-700">
-                    <span>
+                <h2 className="text-2xl font-bold text-blue-700 mb-4">Project Details</h2>
+                <div className="flex flex-wrap text-gray-700">
+                    {/* Row 1 */}
+                    <div className="w-1/3 mb-2">
                         <span className="font-semibold text-gray-900">Project Code:</span> {project.projectCode}
-                    </span>
-                    <span>
-                        <span className="font-semibold text-gray-900">Project Name:</span> {project.name}
-                    </span>
-                    <span>
+                    </div>
+                    <div className="w-1/3 mb-2">
+                        <span className="font-semibold text-gray-900">Project:</span> {project.project}
+                    </div>
+                    <div className="w-1/3 mb-2">
+                        <span className="font-semibold text-gray-900">Project Type:</span> {project.name}
+                    </div>
+
+                    {/* Row 2 */}
+                    <div className="w-1/3 mb-2">
                         <span className="font-semibold text-gray-900">Client Name:</span> {project.client}
-                    </span>
+                    </div>
+                    <div className="w-1/3 mb-2">
+                        <span className="font-semibold text-gray-900">Plan Start Date:</span> {formatDate(project.planStart)}
+                    </div>
+                    <div className="w-1/3 mb-2">
+                        <span className="font-semibold text-gray-900">Plan Close Date:</span> {formatDate(project.planClose)}
+                    </div>
                 </div>
             </div>
-
             {/* Toggle Milestone Form */}
             <button
                 onClick={() => {
@@ -180,6 +218,7 @@ export default function ProjectDetails() {
                             value={milestone.name}
                             onChange={handleChange}
                             className="border rounded px-2 py-1 w-full"
+                            required
                         />
                     </div>
                     <div>
@@ -190,8 +229,10 @@ export default function ProjectDetails() {
                             value={milestone.responsibility}
                             onChange={handleChange}
                             className="border rounded px-2 py-1 w-full"
+                            required
                         />
                     </div>
+                    {/* Plan Start Date */}
                     <div>
                         <label className="block">Plan Start Date</label>
                         <input
@@ -200,18 +241,27 @@ export default function ProjectDetails() {
                             value={milestone.planStartDate}
                             onChange={handleChange}
                             className="border rounded px-2 py-1 w-full"
+                            required
+                            min={project.planStartDate ? formatDate(project.planStart) : undefined} // cannot be before project start
+                            max={project.planCloseDate ? formatDate(project.planClose) : undefined} // cannot be after project close
                         />
                     </div>
+
+                    {/* Plan Closed Date */}
                     <div>
                         <label className="block">Plan Closed Date</label>
                         <input
                             type="date"
                             name="planCloseDate"
-                            value={milestone.planCloseDate}
+                            value={milestone.planClose}
                             onChange={handleChange}
                             className="border rounded px-2 py-1 w-full"
+                            required
+                            min={project.planStartDate ? formatDate(project.planStart) : undefined} // cannot be before project start
+                            max={project.planCloseDate ? formatDate(project.planClose) : undefined} // cannot be after project close
                         />
                     </div>
+
                     <div>
                         <label className="block">Actual Start Date</label>
                         <input
@@ -241,10 +291,12 @@ export default function ProjectDetails() {
                             value={milestone.status || "Open"}
                             onChange={handleChange}
                             className="border rounded px-2 py-1 w-full"
+                            required
                         >
                             <option value="Open">Open</option>
                             <option value="In Progress">In Progress</option>
                             <option value="Closed">Closed</option>
+                            <option value="Closed">Delayed</option>
                         </select>
                     </div>
 

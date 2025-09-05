@@ -497,7 +497,7 @@ export function TicketingSystem() {
                 ${form.status === "Open" ? "bg-red-400" : ""} 
                 ${form.status === "Hold" ? "bg-yellow-400" : ""}`}
             >
-              {["Open", "Closed", "Hold"].map((s) => (
+              {["Open", "Assigned", "Hold", "Closed"].map((s) => (
                 <option key={s} value={s}>
                   {s}
                 </option>

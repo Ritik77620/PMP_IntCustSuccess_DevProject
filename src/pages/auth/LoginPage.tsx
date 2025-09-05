@@ -57,7 +57,13 @@ export function LoginPage() {
 
   return (
     <div className="relative min-h-screen flex items-center justify-center">
-      <div className="absolute inset-0 bg-no-repeat bg-center bg-cover" style={{ backgroundImage: "url('/OrganizationLogo.png')" }} />
+      <div
+        className="absolute inset-0 bg-no-repeat bg-center"
+        style={{
+          backgroundImage: "url('/OrganizationLogo.png')",
+          backgroundSize: "53%", // makes image smaller
+        }}
+      ></div>
       <div className="absolute inset-0 bg-black/40" />
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="relative z-10 w-full max-w-md">
         <Card className="shadow-elegant">

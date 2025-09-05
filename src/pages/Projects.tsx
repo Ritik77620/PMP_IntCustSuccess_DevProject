@@ -219,6 +219,23 @@ export function Projects() {
       setFormData((s) => ({ ...s, [name]: value }));
     }
   };
+ const calculateElapsedDays = (planClose?: string) => {
+  if (!planClose) return "-";
+
+  const today = new Date();
+  const end = new Date(planClose);
+
+  // Zero out the time to compare dates only
+  const todayUTC = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  const endUTC = Date.UTC(end.getFullYear(), end.getMonth(), end.getDate());
+
+  if (endUTC > todayUTC) return "-"; // future date
+
+  const diffDays = Math.floor((todayUTC - endUTC) / (1000 * 60 * 60 * 24));
+  return diffDays;
+};
+
+
 
   const resetForm = () => {
     setFormData({
@@ -345,7 +362,13 @@ export function Projects() {
   };
 
   const columns: ColumnDef<Project>[] = [
-    { accessorKey: "projectCode", header: "PROJECT CODE" },
+    {
+      accessorKey: "projectCode", header: () => (
+        <div className="">
+          PROJECT CODE
+        </div>
+      )
+    },
     {
       accessorKey: "project",
       header: "PROJECT",
@@ -378,6 +401,14 @@ export function Projects() {
     { accessorKey: "planClose", header: "PLAN END DATE", cell: ({ row }) => fmtDateCell(row.getValue("planClose")) },
     { accessorKey: "actualStart", header: "ACTUAL START DATE", cell: ({ row }) => fmtDateCell(row.getValue("actualStart")) },
     { accessorKey: "actualClose", header: "ACTUAL END DATE", cell: ({ row }) => fmtDateCell(row.getValue("actualClose")) },
+    {
+      accessorKey: "elapsedDays",
+      header: "ELAPSED DAYS",
+      cell: ({ row }) => {
+        const planClose = row.getValue("planClose") as string | undefined;
+        return <span>{calculateElapsedDays(planClose)}</span>;
+      },
+    },
     {
       accessorKey: "status",
       header: "STATUS",
@@ -469,8 +500,8 @@ export function Projects() {
           {loading ? (
             <p>Loading...</p>
           ) : (
-            <Tabs defaultValue="all" className="w-full">
-              <TabsList className="grid grid-cols-6 gap-2">
+            <Tabs defaultValue="all" className="w-full ">
+              <TabsList className="grid grid-cols-6 gap-2 bg-blue-600 text-white">
                 <TabsTrigger value="all">All</TabsTrigger>
                 <TabsTrigger value="projectDelayed">Project Delayed</TabsTrigger>
                 <TabsTrigger value="milestoneDelayed">Milestone Delayed</TabsTrigger>
