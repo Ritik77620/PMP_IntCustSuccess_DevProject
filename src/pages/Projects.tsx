@@ -195,15 +195,15 @@ export function Projects() {
     fetchMasterProjects();
   }, []);
 
-const updateStatus = (planClose?: string, actualClose?: string): Status => {
-  const today = new Date();
-  const plan = planClose ? new Date(planClose) : null;
-  const actual = actualClose ? new Date(actualClose) : null;
+  const updateStatus = (planClose?: string, actualClose?: string): Status => {
+    const today = new Date();
+    const plan = planClose ? new Date(planClose) : null;
+    const actual = actualClose ? new Date(actualClose) : null;
 
-  if (plan && !actual && plan < today) return "Delayed";
-  if (actual) return "Completed";
-  return "Running";
-};
+    if (plan && !actual && plan < today) return "Delayed";
+    if (actual) return "Completed";
+    return "Running";
+  };
 
   const calculateProgress = (selectedMilestoneId: string) => {
     if (!milestones.length) return 0;
@@ -215,45 +215,68 @@ const updateStatus = (planClose?: string, actualClose?: string): Status => {
     return totalSequence > 0 ? Math.round((sumSelected / totalSequence) * 100) : 0;
   };
 
- const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-  const { name, value } = e.target;
-  setFormData((prev) => {
-    let updated = { ...prev, [name]: value };
 
-    // Auto update status if planClose or actualClose changes
-    if (name === "planClose" || name === "actualClose") {
-      updated.status = updateStatus(updated.planClose, updated.actualClose);
-    }
+  const generateProjectCode = (clientName: string, projectType: string, serial?: number) => {
+    if (!clientName || !projectType) return "";
+    // Take first 3 letters of client and project type, uppercased
+    const clientPart = clientName.substring(0, 3).toUpperCase();
+    const typePart = projectType.substring(0, 3).toUpperCase();
+    const serialPart = serial !== undefined ? serial.toString().padStart(3, "0") : "001";
+    return `${clientPart}-${typePart}-${serialPart}`;
+  };
 
-    // Handle milestone change
-    if (name === "milestone") {
-      updated.progress = calculateProgress(value);
-    }
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
 
-    // Ensure progress stays valid
-    if (name === "progress") {
-      const num = Number(value);
-      updated.progress = isNaN(num) ? 0 : Math.min(100, Math.max(0, num));
-    }
+    setFormData((prev) => {
+      let updated = { ...prev, [name]: value };
 
-    return updated;
-  });
-};
- const calculateElapsedDays = (planClose?: string) => {
-  if (!planClose) return "-";
+      // Only auto-generate project code for new projects
+      if (!editingId && (name === "client" || name === "name")) {
+        updated.projectCode = generateProjectCode(
+          name === "client" ? value : prev.client,
+          name === "name" ? value : prev.name
+        );
+      }
 
-  const today = new Date();
-  const end = new Date(planClose);
+      // Auto update status if planClose or actualClose changes
+      if (name === "planClose" || name === "actualClose") {
+        updated.status = updateStatus(updated.planClose, updated.actualClose);
+      }
 
-  // Zero out the time to compare dates only
-  const todayUTC = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
-  const endUTC = Date.UTC(end.getFullYear(), end.getMonth(), end.getDate());
+      // Handle milestone change
+      if (name === "milestone") {
+        updated.progress = calculateProgress(value);
+      }
 
-  if (endUTC > todayUTC) return "-"; // future date
+      // Ensure progress stays valid
+      if (name === "progress") {
+        const num = Number(value);
+        updated.progress = isNaN(num) ? 0 : Math.min(100, Math.max(0, num));
+      }
 
-  const diffDays = Math.floor((todayUTC - endUTC) / (1000 * 60 * 60 * 24));
-  return diffDays;
-};
+      return updated;
+    });
+  };
+
+
+
+
+  const calculateElapsedDays = (planClose?: string) => {
+    if (!planClose) return "-";
+
+    const today = new Date();
+    const end = new Date(planClose);
+
+    // Zero out the time to compare dates only
+    const todayUTC = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+    const endUTC = Date.UTC(end.getFullYear(), end.getMonth(), end.getDate());
+
+    if (endUTC > todayUTC) return "-"; // future date
+
+    const diffDays = Math.floor((todayUTC - endUTC) / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
 
 
 
@@ -279,19 +302,23 @@ const updateStatus = (planClose?: string, actualClose?: string): Status => {
 
   const handleSubmit = async () => {
     try {
-      if (!formData.project || !formData.projectCode || !formData.name || !formData.client || !formData.milestone || !formData.planStart || !formData.planClose) {
-        alert("Please fill in required fields: Project, Project Code, Project Type, Client, Milestone, Plan Start, Plan Close.");
+      if (!formData.project || !formData.name || !formData.client || !formData.milestone || !formData.planStart || !formData.planClose) {
+        alert("Please fill in required fields: Project, Project Type, Client, Milestone, Plan Start, Plan Close.");
         return;
       }
-      if (projects.some((p) => p.projectCode === formData.projectCode && p._id !== editingId)) {
-        alert("Project Code must be unique");
-        return;
+
+      // Auto-generate Project Code if not editing
+      if (!editingId && !formData.projectCode) {
+        const serial = projects.length + 1; // simple increment, you can enhance with backend count
+        formData.projectCode = generateProjectCode(formData.client, formData.name, serial);
       }
+
       if (editingId) {
         await api.put(API_ENDPOINTS.projectById(editingId), formData);
       } else {
         await api.post(API_ENDPOINTS.projects, formData);
       }
+
       resetForm();
       setEditingId(null);
       setOpen(false);
@@ -301,6 +328,7 @@ const updateStatus = (planClose?: string, actualClose?: string): Status => {
       alert("Failed to save project");
     }
   };
+
 
   const handleView = (project: Project) => {
     const fmt = (d?: string) => (d ? new Date(d).toISOString().split("T")[0] : "-");
@@ -584,8 +612,7 @@ const updateStatus = (planClose?: string, actualClose?: string): Status => {
                 type="text"
                 name="projectCode"
                 value={formData.projectCode}
-                onChange={handleChange}
-                readOnly={!!editingId}
+                readOnly
                 className="w-full"
               />
             </div>

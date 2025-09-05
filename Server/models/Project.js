@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const ProjectSchema = new mongoose.Schema(
   {
     project: { type: String, required: true },
-    projectCode: { type: String, required: true, unique: true },
+    projectCode: { type: String, required: false, unique: true },
     name: { type: String, required: true }, // project type
     client: { type: String, required: true },
     clientLocation: { type: String },   // ✅ add this
